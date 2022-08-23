@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  dev:
+    build: .
+    volumes:
+      - .:/src/project
+      - /Users/suhas/Work/data:/data
+    entrypoint: /bin/bash -c "sleep infinity"
+    container_name: prob_center_surround
