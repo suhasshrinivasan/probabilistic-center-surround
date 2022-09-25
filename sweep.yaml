@@ -1,0 +1,40 @@
+project: center_surround
+entity: sshr
+program: /src/project/model_simulation.py
+command:
+  - ${env}
+  - python3
+  - ${program}
+  - ${args}
+method: grid
+parameters:
+  gabor_filters_fname:
+    values: ["/src/project/computed/center_masked_surround_gabors.npy"]
+  stimuli_fname:
+    values: ["/src/project/computed/center_masked_surround_stimuli.npy"]
+  global_orientation_lower_bound:
+    values: [0, -90]
+  global_orientation_upper_bound:
+    values: [90, 360]
+  rate_code_signature:
+    values: ["base", "base+vonmises", "base+inv_vonmises", "vonmises", "inv_vonmises"]
+  baseline_firing_rate: 
+    values: [1, 0.5, 0.1]
+  vonmises_loc:
+    values: [0]
+  vonmises_kappa:
+    values: [1, 5, 10, 20]
+  stimulus_std:
+    values: [1, 0.1, 0.01]
+  prior_sampling_draws:
+    values: [10]
+  posterior_sampling_draws:
+    values: [1000]
+  posterior_sampling_tunes:
+    values: [1000]
+  posterior_sampling_chains:
+    values: [4]
+  posterior_sampling_cores:
+    values: [4, 10, 16]
+  random_seed:
+    values: [42, 100]
