@@ -1,5 +1,5 @@
 project: center_surround
-entity: sshr
+entity: walkerlab
 program: /src/project/model_simulation.py
 command:
   - ${env}
@@ -7,25 +7,28 @@ command:
   - ${program}
   - ${args}
 method: grid
+metric:
+  name: sum_diffs
+  goal: maximize
 parameters:
   gabor_filters_fname:
     values: ["/src/project/computed/center_masked_surround_gabors.npy"]
   stimuli_fname:
     values: ["/src/project/computed/center_masked_surround_stimuli.npy"]
   global_orientation_lower_bound:
-    values: [0, -90]
+    values: [0]
   global_orientation_upper_bound:
-    values: [90, 180]
+    values: [180]
   rate_code_signature:
-    values: ["base+vonmises", "base+inv_vonmises", "vonmises", "inv_vonmises"]
+    values: ["inv_(base+vonmises)"]
   baseline_firing_rate: 
-    values: [1, 0.5, 0.1, 0.01]
+    values: [0, 0.01, 0.001]
   vonmises_loc:
     values: [0]
   vonmises_kappa:
-    values: [1, 2, 3, 4, 5, 10, 20, 50]
+    values: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
   stimulus_std:
-    values: [1, 0.1, 0.01]
+    values: [1]
   prior_sampling_draws:
     values: [10]
   posterior_sampling_draws:
@@ -39,4 +42,4 @@ parameters:
   posterior_sampling_tries:
     values: [2]
   random_seed:
-    values: [42, 100]
+    values: [42]

@@ -37,9 +37,11 @@ class HierarchicalModel:
     def build_model(self):
         model = pm.Model()
         with model:
-            stimulus_data = pm.MutableData("stimulus_data", None)
+            stimulus_data = pm.MutableData("stimulus_data", rng.random((50, 50)))
             global_orientation = pm.Uniform(
-                "global_orientation", *self.global_orientation_bounds
+                "global_orientation",
+                lower=self.global_orientation_bounds[0],
+                upper=self.global_orientation_bounds[1],
             )
             neurons = pm.Exponential(
                 "neurons",
@@ -66,6 +68,35 @@ class HierarchicalModel:
             idata = pm.sample_prior_predictive(n_samples, random_seed=42)
         return idata
 
+    # def sample_posterior(
+    #     self,
+    #     observed_stimulus,
+    #     draws=1000,
+    #     tunes=1000,
+    #     chains=4,
+    #     cores=1,
+    #     random_seed=42,
+    #     return_inferencedata=True,
+    #     posterior_sampling_tries=2,
+    # ):
+    #     trace = None
+    #     for _ in range(posterior_sampling_tries):
+    #         with self.model:
+    #             pm.set_data({"stimulus_data": observed_stimulus})
+    #             try:
+    #                 trace = pm.sample(
+    #                     draws=draws,
+    #                     tune=tunes,
+    #                     chains=chains,
+    #                     cores=cores,
+    #                     random_seed=random_seed,
+    #                     return_inferencedata=return_inferencedata,
+    #                 )
+    #                 break
+    #             except pm.exceptions.SamplingError as e:
+    #                 print(e)
+    #     return trace
+
     def sample_posterior(
         self,
         observed_stimulus,
@@ -75,10 +106,12 @@ class HierarchicalModel:
         cores=1,
         random_seed=42,
         return_inferencedata=True,
+        posterior_sampling_tries=2,
     ):
+        trace = None
         with self.model:
             pm.set_data({"stimulus_data": observed_stimulus})
-            idata = pm.sample(
+            trace = pm.sample(
                 draws=draws,
                 tune=tunes,
                 chains=chains,
@@ -86,4 +119,4 @@ class HierarchicalModel:
                 random_seed=random_seed,
                 return_inferencedata=return_inferencedata,
             )
-        return idata
+        return trace

@@ -232,7 +232,7 @@ def analyze_traces(center_cut_trace, congruent_trace, incongruent_trace):
 def main(config):
     gabor_filters = np.load(config["gabor_filters_fname"])
     orientation_preferences_fname = (
-        config["gabor_filters_fname"][:-5] + "_orientations.npy"
+        config["gabor_filters_fname"][:-4] + "_orientations.npy"
     )
     orientation_preferences = np.load(orientation_preferences_fname)
     n_neurons = gabor_filters.shape[0]
@@ -289,17 +289,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--gabor_filters_fname",
         type=str,
-        default="/src/project/computed/center_masked_surround_gabors.npy",
+        default="/src/project/computed/gabor_filters_overlapping.npy",
     )
     parser.add_argument(
         "--stimuli_fname",
         type=str,
-        default="/src/project/computed/center_masked_surround_stimuli.npy",
+        default="/src/project/computed/gabor_filters_overlapping_stimuli.npy",
     )
     parser.add_argument("--global_orientation_lower_bound", type=float, default=0.0)
     parser.add_argument("--global_orientation_upper_bound", type=float, default=180.0)
     parser.add_argument(
-        "--rate_code_signature", type=str, default="inv_(base+vonmises)"
+        "--rate_code_signature", type=str, default="base"
     )
     parser.add_argument("--baseline_firing_rate", type=float, default=1.0)
     parser.add_argument("--vonmises_loc", type=float, default=0.0)
