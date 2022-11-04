@@ -4,9 +4,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import wandb
 from pandas import DataFrame as DF
 
-import wandb
 from models import HierarchicalModel
 from utils import rate_code
 

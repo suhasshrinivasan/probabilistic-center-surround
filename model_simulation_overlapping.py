@@ -253,7 +253,7 @@ def main(config):
     print("Prior sampling")
     prior_idata = model.sample_prior(config["prior_sampling_draws"])
     analyze_prior(prior_idata, gabor_filters, orientation_preferences, config)
-    center_cut_stimulus, congruent_stimulus, incongruent_stimulus = np.load(
+    center_cut_stimulus, incongruent_stimulus, congruent_stimulus = np.load(
         config["stimuli_fname"]
     )
     print("Posterior sampling")
@@ -297,13 +297,13 @@ if __name__ == "__main__":
         default="/src/project/computed/gabor_filters_overlapping_stimuli.npy",
     )
     parser.add_argument("--global_orientation_lower_bound", type=float, default=0.0)
-    parser.add_argument("--global_orientation_upper_bound", type=float, default=180.0)
+    parser.add_argument("--global_orientation_upper_bound", type=float, default=90.0)
     parser.add_argument(
-        "--rate_code_signature", type=str, default="base"
+        "--rate_code_signature", type=str, default="inv_(base+vonmises)"
     )
-    parser.add_argument("--baseline_firing_rate", type=float, default=1.0)
+    parser.add_argument("--baseline_firing_rate", type=float, default=0.001)
     parser.add_argument("--vonmises_loc", type=float, default=0.0)
-    parser.add_argument("--vonmises_kappa", type=float, default=1.0)
+    parser.add_argument("--vonmises_kappa", type=float, default=25)
     parser.add_argument("--stimulus_std", type=float, default=0.1)
     parser.add_argument("--prior_sampling_draws", type=int, default=10)
     parser.add_argument("--posterior_sampling_draws", type=int, default=1000)
