@@ -6,4 +6,4 @@ services:
       - .:/src/project
       - /var/sinz-shared:/data
     entrypoint: /bin/bash -c "sleep infinity"
-    container_name: suhas_dev_cpu
+    container_name: suhas_dev_2_gpu0

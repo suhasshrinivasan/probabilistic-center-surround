@@ -1,11 +1,8 @@
-FROM walkerlab/pytorch:python3.8-torch1.11.0-cuda11.2.1
+FROM walkerlab/pytorch-jupyter:cuda-11.7.1-pytorch-1.13.1-torchvision-0.13.0-torchaudio-0.11.0-ubuntu-20.04
 
 RUN apt-get update 
-RUN apt-get install -y tree fish libnetcdf-dev
+RUN pip3 install --upgrade pip
 RUN pip3 install black scikit-image wandb pymc
-RUN pip3 install pymc
-
-RUN git clone https://github.com/sinzlab/insilico-stimuli.git /src/insilico-stimuli &&\
-    pip3 install /src/insilico-stimuli
+RUN pip3 install "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_releases.html
 
 ADD . /src/project
