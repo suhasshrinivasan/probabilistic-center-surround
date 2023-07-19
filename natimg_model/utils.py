@@ -1,15 +1,14 @@
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import DatasetFolder
 
-import numpy as np
-
 
 def load_images(
-    dataset_folder_path="/src/project/data/natimgs/",
-    transform=transforms.RandomCrop(25),
+    dataset_folder_path="/src/project/data/natimgs/", crop_size=25, n_samples=20_000
 ):
+    transform = transforms.RandomCrop(crop_size)
     dataset = DatasetFolder(
         root=dataset_folder_path,
         loader=lambda path: torch.from_numpy(np.load(path)),
@@ -17,4 +16,5 @@ def load_images(
         transform=transform,
     )
     dataloader = DataLoader(dataset, batch_size=dataset.__len__())
-    return next(iter(dataloader))
+    images, labels = next(iter(dataloader))
+    return images.numpy()[:n_samples]
