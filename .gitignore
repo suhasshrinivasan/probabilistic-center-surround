@@ -1,4 +1,6 @@
 # custom
+*.joblib
+*.npy
 data/
 computed/
 .vscode/
