@@ -12,14 +12,16 @@ from utils import load_images
 FIG_DPI = 300
 
 
-def perform_ica(images, n_components, negentropy, max_iter, whiten_solver, seed):
+def perform_ica(
+    images, n_components, negentropy, max_iter, whiten, whiten_solver, seed
+):
     # create ica model
     images = images.reshape(images.shape[0], -1)
     ica_model = FastICA(
         n_components=n_components,
         fun=negentropy,
         max_iter=max_iter,
-        whiten=True,
+        whiten=whiten,
         whiten_solver=whiten_solver,
         random_state=seed,
     )
@@ -85,6 +87,7 @@ def perform_repeat_ica(
     n_components,
     negentropy,
     max_iter,
+    whiten,
     whiten_solver,
     n_repeats,
     meta_seed,
@@ -104,7 +107,7 @@ def perform_repeat_ica(
         models_savepath = save_path.joinpath(f"model_{seed}.joblib")
         # perform ica
         ica_model = perform_ica(
-            images, n_components, negentropy, max_iter, whiten_solver, seed
+            images, n_components, negentropy, max_iter, whiten, whiten_solver, seed
         )
         print(f"Visualizing ICA for seed {seed}...")
         # visualize the mixing matrix
@@ -132,6 +135,7 @@ def repeat_ica_handler(
     n_samples,
     negentropy,
     max_iter,
+    whiten,
     whiten_solver,
     n_repeats,
     meta_seed,
@@ -154,6 +158,7 @@ def repeat_ica_handler(
         dataset_folder_path=images_folder_basepath,
         crop_size=root_crop_size,
         n_samples=n_samples,
+        seed=meta_seed,
     )
     # save sample of images as a fig
     fig, axs = plt.subplots(root_n_images_save, root_n_images_save, dpi=FIG_DPI)
@@ -170,6 +175,7 @@ def repeat_ica_handler(
         n_components,
         negentropy,
         max_iter,
+        whiten,
         whiten_solver,
         n_repeats,
         meta_seed,
@@ -192,6 +198,7 @@ def main():
     parser.add_argument("--n_samples", type=int, default=20_000)
     parser.add_argument("--negentropy", type=str, default="logcosh")
     parser.add_argument("--max_iter", type=int, default=200)
+    parser.add_argument("--whiten", type=str, default="unit-variance")
     parser.add_argument("--whiten_solver", type=str, default="svd")
 
     # center-surround panelling arguments
