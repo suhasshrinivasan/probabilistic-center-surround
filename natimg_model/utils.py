@@ -6,8 +6,12 @@ from torchvision.datasets import DatasetFolder
 
 
 def load_images(
-    dataset_folder_path="/src/project/data/natimgs/", crop_size=25, n_samples=20_000
+    dataset_folder_path="/src/project/data/natimgs/",
+    crop_size=25,
+    n_samples=20_000,
+    seed=0,
 ):
+    torch.manual_seed(seed)
     transform = transforms.RandomCrop(crop_size)
     dataset = DatasetFolder(
         root=dataset_folder_path,
