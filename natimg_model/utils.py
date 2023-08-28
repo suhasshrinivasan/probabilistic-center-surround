@@ -22,3 +22,8 @@ def load_images(
     dataloader = DataLoader(dataset, batch_size=dataset.__len__())
     images, labels = next(iter(dataloader))
     return images.numpy()[:n_samples]
+
+
+def turn_images_into_cropsets(images, n_sets=9):
+    n_pixels = images.shape[-1] * images.shape[-2]
+    crop_dim = int(np.sqrt(n_pixels / n_sets))
