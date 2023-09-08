@@ -10,4 +10,8 @@ RUN pip3 install --upgrade pip
 RUN pip3 install black scikit-image wandb pymc numpyro graphviz
 RUN pip3 install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
+RUN git clone https://github.com/suhasshrinivasan/insilico-stimuli.git /src/insilico-stimuli &&\
+    cd /src/insilico-stimuli &&\
+    pip3 install /src/insilico-stimuli
+
 ADD . /src/project
