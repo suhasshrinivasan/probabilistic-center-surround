@@ -4,14 +4,17 @@ RUN apt-get update
 
 RUN apt-get install libcudnn8=8.6.0.163-1+cuda11.8
 
-RUN apt install -y fish graphviz
+RUN apt install -y fish
 
 RUN pip3 install --upgrade pip
 RUN pip3 install black scikit-image wandb pymc numpyro graphviz
 RUN pip3 install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+RUN pip3 install pip3 install nvidia-cudnn-cu11==8.6.0.163
 
 RUN git clone https://github.com/suhasshrinivasan/insilico-stimuli.git /src/insilico-stimuli &&\
     cd /src/insilico-stimuli &&\
     pip3 install /src/insilico-stimuli
 
-ADD . /src/project
+### build project as package
+COPY . /src/project
+RUN pip3 install --user -e /src/project
