@@ -2,6 +2,7 @@ version: "3.9"
 services:
   dev:
     build: .
+    env_file: .env
     volumes:
       - .:/src/project
       - /var/sinz-shared:/data

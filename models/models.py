@@ -42,9 +42,11 @@ class HierarchicalPanelICA:
             self.X_dim,
             self.X_patch_dim,
         ) = self._construct_X_I_mapping()
+        self.I_patch_side = int(np.sqrt(self.I_patch_dim))
 
         self.I_sigma = I_sigma
         self.I_dim = self.X_I_mapping.shape[0]
+        self.I_side = int(np.sqrt(self.I_dim))
 
         self.prob_model = pm.Model()
         with self.prob_model:
@@ -72,8 +74,8 @@ class HierarchicalPanelICA:
         X_dim = X_patch_dim * len(self.X_I_models)
         I_patch_dim = self.X_I_models[0].mixing_.shape[0]
         I_dim = I_patch_dim * len(self.X_I_models)
-        X_I_mapping = np.zeros((I_dim, X_dim))
 
+        X_I_mapping = np.zeros((I_dim, X_dim))
         for idx, model in enumerate(self.X_I_models):
             X_I_mapping[
                 idx * I_patch_dim : (idx + 1) * I_patch_dim,
@@ -81,9 +83,7 @@ class HierarchicalPanelICA:
             ] = model.mixing_
 
         # alternatively, tensorize
-        # X_I_mapping = np.array([
-        #     model.mixing_ for model in self.X_I_models
-        # ])
+        # X_I_mapping = np.array([model.mixing_ for model in self.X_I_models])
 
         return (
             X_I_mapping,
@@ -97,10 +97,10 @@ class HierarchicalPanelICA:
         image,
         n_samples,
         random_seed,
-        return_inferencedata=True,
         tune=1000,
         chains=None,
         cores=None,
+        return_inferencedata=True,
     ):
         """
         Sample from the posterior distribution.
@@ -110,14 +110,16 @@ class HierarchicalPanelICA:
             image=image,
             n_samples=n_samples,
             random_seed=random_seed,
-            return_inferencedata=return_inferencedata,
             tune=tune,
             chains=chains,
             cores=cores,
+            return_inferencedata=return_inferencedata,
         )
 
     def sample_prior_predictive(
-        self, n_samples, random_seed, return_inferencedata=True
+        self,
+        n_samples,
+        random_seed,
     ):
         """
         Sample from the prior predictive distribution.
@@ -125,31 +127,51 @@ class HierarchicalPanelICA:
         Args:
             n_samples (int): number of samples to draw
             random_seed (int): random seed for reproducibility
-            return_inferencedata (bool): whether to return the samples as an arviz.InferenceData object
 
         Returns:
-            if return_inferencedata is True:
-                arviz.InferenceData object consisting of the samples as well as other inference data
-            else:
-                samples as a dict containing the samples for all variables
+            samples as a dict containing the samples for all variables
         """
         with self.prob_model:
-            idata = pm.sample_prior_predictive(
+            prior_samples_dict = pm.sample_prior_predictive(
                 n_samples,
                 random_seed=random_seed,
-                return_inferencedata=return_inferencedata,
+                return_inferencedata=False,
             )
-        return idata
+        # reshape images
+        images = prior_samples_dict["I"]
+        reshaped_images = []
+        # first reshape each image patch into a square
+        for image in images:
+            reshaped_image = np.array(
+                [
+                    image[i * self.I_patch_dim : (i + 1) * self.I_patch_dim].reshape(
+                        self.I_patch_side, self.I_patch_side
+                    )
+                    for i in range(len(self.X_I_models))
+                ]
+            )
+            reshaped_images.append(reshaped_image)
+        # then reshape the square patches into larger squares
+        reshaped_images = np.array(
+            [
+                np.vstack(
+                    [np.hstack(reshaped_image[i * 3 : (i + 1) * 3]) for i in range(3)]
+                )
+                for reshaped_image in reshaped_images
+            ]
+        )
+        prior_samples_dict["I"] = reshaped_images
+        return prior_samples_dict
 
     def sample_posterior(
         self,
         image,
         n_samples,
         random_seed,
-        return_inferencedata=True,
         tune=1000,
         chains=None,
         cores=None,
+        return_inferencedata=True,
     ):
         """
         Sample from the posterior distribution.
@@ -158,20 +180,26 @@ class HierarchicalPanelICA:
             image (np.ndarray): image to condition on of shape self.I_dim (flattened image)
             n_samples (int): number of samples to draw per chain
             random_seed (int): random seed for reproducibility
-            return_inferencedata (bool): whether to return the samples as an arviz.InferenceData object
             tune (int): number of tuning steps per chain
             chains (int): number of chains
             cores (int): number of cores to use
 
         Returns:
-            if return_inferencedata is True:
-                arviz.InferenceData object consisting of the samples as well as other inference data
-            else:
-                samples as a dict with keys 'latent' and 'image' containing the samples
+            samples as a dict with keys containing samples of latent variables
         """
+        reshaped_image = []
+        for i in range(3):
+            for j in range(3):
+                reshaped_stim = image[
+                    i * self.I_patch_side : (i + 1) * self.I_patch_side,
+                    j * self.I_patch_side : (j + 1) * self.I_patch_side,
+                ].reshape(self.I_patch_side**2)
+                reshaped_image.append(reshaped_stim)
+        reshaped_image = np.array(reshaped_image).flatten()
+        print("reshaped_image", reshaped_image.shape)
         with self.prob_model:
-            pm.set_data({"obs": image})
-            idata = pm.sample(
+            pm.set_data({"obs": reshaped_image})
+            post_samples_dict = pm.sample(
                 draws=n_samples,
                 random_seed=random_seed,
                 return_inferencedata=return_inferencedata,
@@ -179,7 +207,7 @@ class HierarchicalPanelICA:
                 chains=chains,
                 cores=cores,
             )
-        return idata
+        return post_samples_dict
 
     def visualize_learned_G(self):
         """
@@ -273,3 +301,26 @@ class HierarchicalPanelICA:
                 )
                 ax.axis("off")
             fig.suptitle(panel_ids[model_id])
+
+    def visualize_center_X_mappings(self, center_model_id):
+        center_X_I_model = self.X_I_models[center_model_id]
+        center_X_I_mapping = center_X_I_model.mixing_
+        center_latent_offset = center_model_id * self.X_patch_dim
+        ncols = 10
+        nrows = int(self.X_patch_dim / ncols)
+        fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols, nrows))
+        for idx, ax in enumerate(axs.flatten()):
+            mapping_image = center_X_I_mapping[:, idx].reshape(
+                (self.I_patch_side, self.I_patch_side)
+            )
+            ax.imshow(mapping_image, cmap="gray")
+            latent_id = idx + center_latent_offset
+            ax.text(
+                0.1,
+                0.9,
+                str(latent_id),
+                color="orange",
+                fontsize=10,
+                transform=ax.transAxes,
+            )
+            ax.axis("off")
