@@ -4,6 +4,7 @@ from hashlib import md5
 
 import numpy as np
 import torch
+from skimage import transform as sk_transform
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import DatasetFolder
@@ -28,9 +29,19 @@ def load_images(
     return images.numpy()[:n_samples]
 
 
-def turn_images_into_cropsets(images, n_sets=9):
-    n_pixels = images.shape[-1] * images.shape[-2]
-    crop_dim = int(np.sqrt(n_pixels / n_sets))
+def sqcrop_and_resize(images, size=(36, 36), anti_aliasing=False):
+    final_images = []
+    for image in images:
+        h, w = image.shape
+        cropped = image[:, int((w - h) / 2) : -int((w - h) / 2)]
+        resized = sk_transform.resize(cropped, size, anti_aliasing=anti_aliasing)
+        final_images.append(resized)
+    return np.array(final_images)
+
+
+# def turn_images_into_cropsets(images, n_sets=9):
+#     n_pixels = images.shape[-1] * images.shape[-2]
+#     crop_dim = int(np.sqrt(n_pixels / n_sets))
 
 
 # from nnfabrik:
