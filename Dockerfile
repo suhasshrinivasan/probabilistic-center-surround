@@ -4,10 +4,10 @@ RUN apt-get update
 
 RUN apt-get install libcudnn8=8.6.0.163-1+cuda11.8
 
-RUN apt install -y fish
+RUN apt-get install -y fish ffmpeg libsm6 libxext6
 
 RUN pip3 install --upgrade pip
-RUN pip3 install black scikit-image wandb pymc numpyro graphviz datajoint==0.14.0
+RUN pip3 install black scikit-image wandb pymc numpyro graphviz datajoint==0.14.0 opencv-python
 RUN pip3 install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 RUN pip3 install nvidia-cudnn-cu11==8.6.0.163
 
