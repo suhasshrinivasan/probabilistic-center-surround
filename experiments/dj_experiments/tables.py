@@ -10,6 +10,7 @@ from experiments.dj_experiments.hierarchical_grating_experiments import (
     hierarchical_3_grating_experiment,
     hierarchical_4_grating_experiment,
 )
+from experiments.exc_driven_model.exc_experiment import exc_dj_experiment
 
 dj.config["enable_python_native_blobs"] = True
 
@@ -170,3 +171,78 @@ class Hierarchical4GratingResult(dj.Computed):
         # filepath.unlink()
         samples_dict["config_id"] = key["config_id"]
         self.insert1(samples_dict)
+
+
+@schema
+class ExcConfig(dj.Manual):
+    definition = """
+    config_id: char(32)
+    ---
+    seed: int   # random seed
+    g_dim: int  # dimensionality of G
+    g_prob: float   # Bernoulli probability of g_i being 1
+    x_sigma: float  # Laplace distribution scale parameter for x
+    i_sigma: float  # Normal distribution scale parameter for i
+    patterns_offset: float   # offset to increase cosine similarity between patterns
+    n_tune: int # number of tuning samples
+    n_draws: int    # number of samples to draw
+    n_chains: int  # number of chains
+    n_cores: int  # number of cores to use
+    """
+
+
+@schema
+class ExcResult(dj.Computed):
+    definition = """
+    -> ExcConfig
+    ---
+    model: attach@external
+    all_idata: attach@external
+    all_stimuli: attach@external
+    all_g_means: longblob
+    all_g_means_sde: longblob
+    all_center_x_means: longblob
+    all_center_x_means_sde: longblob 
+    all_center_x_perc_change_means: longblob
+    all_center_x_perc_change_means_sde: longblob
+    """
+
+    def make(self, key):
+        config = (ExcConfig & key).fetch1()
+        (
+            model,
+            all_idata,
+            all_stimuli,
+            all_g_means,
+            all_g_means_sde,
+            all_center_x_means,
+            all_center_x_means_sde,
+            all_center_x_perc_change_means,
+            all_center_x_perc_change_means_sde,
+        ) = exc_dj_experiment(**config)
+        filepath = Path(f"/tmp/{key['config_id']}.pkl")
+        with filepath.open("wb") as f:
+            pickle.dump(model, f)
+        key["model"] = filepath
+        filepath.unlink()
+
+        filepath = Path(f"/tmp/{key['config_id']}_idata.pkl")
+        with filepath.open("wb") as f:
+            pickle.dump(all_idata, f)
+        key["all_idata"] = filepath
+        filepath.unlink()
+
+        filepath = Path(f"/tmp/{key['config_id']}_stimuli.pkl")
+        with filepath.open("wb") as f:
+            pickle.dump(all_stimuli, f)
+        key["all_stimuli"] = filepath
+        filepath.unlink()
+
+        key["all_g_means"] = all_g_means
+        key["all_g_means_sde"] = all_g_means_sde
+        key["all_center_x_means"] = all_center_x_means
+        key["all_center_x_means_sde"] = all_center_x_means_sde
+        key["all_center_x_perc_change_means"] = all_center_x_perc_change_means
+        key["all_center_x_perc_change_means_sde"] = all_center_x_perc_change_means_sde
+
+        self.insert1(key)

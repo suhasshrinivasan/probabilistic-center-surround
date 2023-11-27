@@ -71,26 +71,16 @@ class PatternCompletionModel:
 
     def __call__(
         self,
-        image,
-        n_samples,
-        random_seed,
-        tune=1000,
-        chains=None,
-        cores=None,
-        return_inferencedata=True,
+        *args,
+        **kwargs,
     ):
         """
         Sample from the posterior distribution.
         See self.sample_posterior for details.
         """
         return self.sample_posterior(
-            image=image,
-            n_samples=n_samples,
-            random_seed=random_seed,
-            tune=tune,
-            chains=chains,
-            cores=cores,
-            return_inferencedata=return_inferencedata,
+            *args,
+            **kwargs,
         )
 
     def sample_prior_predictive(
@@ -150,6 +140,7 @@ class PatternCompletionModel:
         chains=None,
         cores=None,
         return_inferencedata=True,
+        pymc_logging=False,
     ):
         """
         Sample from the posterior distribution over X and G given an image: p(X, G | I)
@@ -174,7 +165,14 @@ class PatternCompletionModel:
                 ].reshape(self.I_patch_side**2)
                 reshaped_image.append(reshaped_stim)
         reshaped_image = np.array(reshaped_image).flatten()
-        print("reshaped_image", reshaped_image.shape)
+        if not pymc_logging:
+            import logging
+
+            logger = logging.getLogger("pymc3")
+            logger.propagate = False
+            progressbar = False
+        else:
+            progressbar = True
         with self.prob_model:
             pm.set_data({"obs": reshaped_image})
             post_samples_dict = pm.sample(
@@ -184,6 +182,7 @@ class PatternCompletionModel:
                 tune=tune,
                 chains=chains,
                 cores=cores,
+                progressbar=progressbar,
             )
         return post_samples_dict
 
