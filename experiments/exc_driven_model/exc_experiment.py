@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+from insilico_stimuli.stimuli import CenterSurround
 from sklearn.metrics.pairwise import cosine_similarity
 
 from models.pattern_completion_model import PatternCompletionModel
@@ -307,6 +308,84 @@ def exc_dj_experiment(
     exc_images = exc_images - exc_images_mean
 
     patterns = exc_images[:g_dim]
+    return center_surround_experiment(
+        seed=seed,
+        patterns=patterns,
+        g_dim=g_dim,
+        g_prob=g_prob,
+        x_sigma=x_sigma,
+        i_sigma=i_sigma,
+        patterns_offset=patterns_offset,
+        n_tune=n_tune,
+        n_draws=n_draws,
+        n_chains=n_chains,
+        n_cores=n_cores,
+    )
+
+
+def grating_dj_experiment(
+    config_id,
+    seed,
+    g_dim,
+    g_prob,
+    x_sigma,
+    i_sigma,
+    patterns_offset,
+    n_tune,
+    n_draws,
+    n_chains,
+    n_cores,
+):
+    """
+    DJ function to run center surround experiment.
+    All this does is call center_surround_experiment by constructing grating patterns.
+    """
+    # create stimuli
+    # set parameters
+    canvas_size = [36, 36]
+    locations = [[18, 18]]  # center position
+    sizes_total = [36]  # total size (center + surround)
+    sizes_center = [0.5]  # portion of radius used for center circle
+    sizes_surround = [0.5]  # defines the starting portion of radius for surround
+    contrasts_center = [1.0]  # define center contrast
+    contrasts_surround = [1.0]  # surround contrast
+    spatial_frequencies_center = [0.2]  # fixed spatial frequency
+    phases_center = [np.pi]  # center phases
+    grey_levels = [0.0]  # fixed grey level
+
+    # set orientations of gratings
+    orientations_center = list(
+        np.linspace(-np.pi / 2, np.pi / 2, g_dim, endpoint=False)
+    )
+    orientations_surround = list(
+        np.linspace(-np.pi / 2, np.pi / 2, g_dim, endpoint=False)
+    )
+
+    center_surround = CenterSurround(
+        canvas_size=canvas_size,
+        locations=locations,
+        sizes_total=sizes_total,
+        sizes_center=sizes_center,
+        sizes_surround=sizes_surround,
+        contrasts_center=contrasts_center,
+        contrasts_surround=contrasts_surround,
+        orientations_center=orientations_center,
+        orientations_surround=orientations_surround,
+        spatial_frequencies_center=spatial_frequencies_center,
+        phases_center=phases_center,
+        grey_levels=grey_levels,
+    )
+
+    # choose only those gratings where center and surround have the same orientation
+    patterns = np.array(
+        [
+            center_surround.images()[idx]
+            for idx in range(len(center_surround.images()))
+            if center_surround.params_dict_from_idx(idx)["orientation_center"]
+            == center_surround.params_dict_from_idx(idx)["orientation_surround"]
+        ]
+    )
+
     return center_surround_experiment(
         seed=seed,
         patterns=patterns,

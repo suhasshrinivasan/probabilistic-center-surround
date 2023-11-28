@@ -165,14 +165,6 @@ class PatternCompletionModel:
                 ].reshape(self.I_patch_side**2)
                 reshaped_image.append(reshaped_stim)
         reshaped_image = np.array(reshaped_image).flatten()
-        if not pymc_logging:
-            import logging
-
-            logger = logging.getLogger("pymc3")
-            logger.propagate = False
-            progressbar = False
-        else:
-            progressbar = True
         with self.prob_model:
             pm.set_data({"obs": reshaped_image})
             post_samples_dict = pm.sample(
@@ -182,7 +174,6 @@ class PatternCompletionModel:
                 tune=tune,
                 chains=chains,
                 cores=cores,
-                progressbar=progressbar,
             )
         return post_samples_dict
 

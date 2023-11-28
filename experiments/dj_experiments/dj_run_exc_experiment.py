@@ -7,18 +7,18 @@ from utils.utils import make_hash
 
 configs = OrderedDict(
     seed=[42],
-    g_dim=[10, 20],
-    g_prob=[1 / 2, 1 / 5, 1 / 10, 1 / 20],
+    g_dim=[4],
+    g_prob=[1 / 2],
     x_sigma=[0.1],
-    i_sigma=[1, 5, 10, 20],
+    i_sigma=[5, 10, 20],
     patterns_offset=[0],
-    n_tune=[1000],
-    n_draws=[1000],
-    n_chains=[4],
-    n_cores=[4],
+    n_tune=[500],
+    n_draws=[500],
+    n_chains=[1],
+    n_cores=[1],
 )
 
-# test config for debugging
+# # test config for debugging
 # configs = OrderedDict(
 #     seed=[42],
 #     g_dim=[2],
