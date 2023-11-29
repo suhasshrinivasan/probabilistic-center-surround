@@ -140,6 +140,7 @@ def center_surround_experiment(
     total_center_x_dims = g_dim
     center_x_ids = np.arange(4 * g_dim, 4 * g_dim + total_center_x_dims)
     print("Number of center x dims: ", total_center_x_dims)
+
     for idx, center_x_id in enumerate(center_x_ids):
         print(f"Running experiment for center x dim {idx}/{total_center_x_dims} ...")
         idatas = []
@@ -150,12 +151,14 @@ def center_surround_experiment(
         center_x_means_sde = []
         center_x_perc_change_means = []
         center_x_perc_change_means_sde = []
+
         # first create MEI
         MEI = np.zeros((36, 36))
         MEI_center = model.pattern_crops[4][idx].reshape(12, 12).copy()
         MEI[12:24, 12:24] = MEI_center.copy()
         # append to stimuli
         stimuli.append(MEI)
+
         print("Sampling posterior for MEI ...")
         # sample posterior for MEI
         mei_idata = model.sample_posterior(
@@ -169,15 +172,19 @@ def center_surround_experiment(
         )
         # append to idata
         idatas.append(mei_idata)
+
         # compute center stats
         mei_x_mean = get_center_x_mean(mei_idata, center_x_id)
         mei_x_mean_mean_chains = mei_x_mean.mean()
-        center_x_means.append(mei_x_mean_mean_chains)
         mei_x_mean_sde_chains = mei_x_mean.std() / np.sqrt(n_chains)
+
+        center_x_means.append(mei_x_mean_mean_chains)
         center_x_means_sde.append(mei_x_mean_sde_chains)
+
         mei_g_mean = get_g_mean(mei_idata)
         mei_g_mean_mean_chains = mei_g_mean.mean(axis=0)
         mei_g_mean_sde_chains = mei_g_mean.std(axis=0) / np.sqrt(n_chains)
+
         g_means.append(mei_g_mean_mean_chains)
         g_means_sde.append(mei_g_mean_sde_chains)
 
@@ -186,6 +193,7 @@ def center_surround_experiment(
         completing_pattern = model.patterns[idx].copy()
         # append to stimuli
         stimuli.append(completing_pattern)
+
         # sample posterior for completing surround
         completing_idata = model.sample_posterior(
             image=completing_pattern,
@@ -197,18 +205,22 @@ def center_surround_experiment(
             pymc_logging=pymc_logging,
         )
         # append to idata
-        all_idata.append(completing_idata)
+        idatas.append(completing_idata)
         # compute center stats
         completing_x_mean = get_center_x_mean(completing_idata, center_x_id)
         completing_x_mean_mean_chains = completing_x_mean.mean()
         completing_x_mean_sde_chains = completing_x_mean.std() / np.sqrt(n_chains)
+
         center_x_means.append(completing_x_mean_mean_chains)
         center_x_means_sde.append(completing_x_mean_sde_chains)
+
         completing_g_mean = get_g_mean(completing_idata)
         completing_g_mean_mean_chains = completing_g_mean.mean(axis=0)
         completing_g_mean_sde_chains = completing_g_mean.std(axis=0) / np.sqrt(n_chains)
+
         g_means.append(completing_g_mean_mean_chains)
         g_means_sde.append(completing_g_mean_sde_chains)
+
         completing_perc_change = (completing_x_mean - mei_x_mean) / mei_x_mean * 100
         completing_perc_change_mean_chains = completing_perc_change.mean()
         completing_perc_change_sde_chains = completing_perc_change.std() / np.sqrt(
@@ -229,6 +241,7 @@ def center_surround_experiment(
             disrupting_pattern[12:24, 12:24] = MEI_center.copy()
             # append to stimuli
             stimuli.append(disrupting_pattern)
+
             # sample posterior for disrupting surround
             disrupting_idata = model.sample_posterior(
                 image=disrupting_pattern,
@@ -240,7 +253,8 @@ def center_surround_experiment(
                 pymc_logging=pymc_logging,
             )
             # append to idata
-            all_idata.append(disrupting_idata)
+            idatas.append(disrupting_idata)
+
             # compute center stats
             disrupting_x_mean = get_center_x_mean(disrupting_idata, center_x_id)
             disrupting_x_mean_mean_chains = disrupting_x_mean.mean()
@@ -250,10 +264,12 @@ def center_surround_experiment(
             disrupting_g_mean_sde_chains = disrupting_g_mean.std(axis=0) / np.sqrt(
                 n_chains
             )
+
             g_means.append(disrupting_g_mean_mean_chains)
             g_means_sde.append(disrupting_g_mean_sde_chains)
             center_x_means.append(disrupting_x_mean_mean_chains)
             center_x_means_sde.append(disrupting_x_mean_sde_chains)
+
             disrupting_perc_change = (disrupting_x_mean - mei_x_mean) / mei_x_mean * 100
             disrupting_perc_change_mean_chains = disrupting_perc_change.mean()
             disrupting_perc_change_sde_chains = disrupting_perc_change.std() / np.sqrt(
