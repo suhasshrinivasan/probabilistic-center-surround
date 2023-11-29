@@ -1,9 +1,9 @@
 import itertools as it
 from collections import OrderedDict
 
-from grating_tables import GratingConfig, GratingResult
+from probcs.datajoint.grating_tables import GratingConfig, GratingResult2
 
-from utils.utils import make_hash
+from probcs.utils.utils import make_hash
 
 configs = OrderedDict(
     seed=[42],
@@ -40,4 +40,4 @@ for values in it.product(*configs.values()):
     config_list.append(config)
 
 GratingConfig.insert(config_list, skip_duplicates=True)
-GratingResult.populate(reserve_jobs=True, order="random")
+GratingResult2.populate(reserve_jobs=True, order="random")
