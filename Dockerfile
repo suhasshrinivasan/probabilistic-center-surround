@@ -1,5 +1,6 @@
 FROM ghcr.io/walkerlab/docker-pytorch-cuda:cuda-11.8.0-pytorch-1.13.0-torchvision-0.14.0-torchaudio-0.13.0-ubuntu-20.04
 RUN apt-get update 
+
 RUN pip3 install --upgrade pip
 RUN pip3 install scikit-image pymc datajoint==0.14.0 pyparsing==3.1.1
 

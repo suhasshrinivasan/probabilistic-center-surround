@@ -4,7 +4,8 @@ import numpy as np
 from insilico_stimuli.stimuli import CenterSurround
 from sklearn.metrics.pairwise import cosine_similarity
 
-from models.pattern_completion_model import PatternCompletionModel
+from ..models.pattern_completion_model import PatternCompletionModel
+import datajoint as dj
 
 
 def get_center_x_mean(idata, center_x_id):
@@ -260,6 +261,8 @@ def center_surround_experiment(
             )
             center_x_perc_change_means.append(disrupting_perc_change_mean_chains)
             center_x_perc_change_means_sde.append(disrupting_perc_change_sde_chains)
+
+            dj.conn().ping()
 
         all_idata.append(idatas)
         all_stimuli.append(stimuli)

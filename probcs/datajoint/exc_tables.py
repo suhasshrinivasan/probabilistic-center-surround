@@ -4,7 +4,7 @@ from pathlib import Path
 
 import datajoint as dj
 
-from experiments.exc_driven_model.exc_experiment import exc_dj_experiment
+from ..experiment_running.exc_experiment import exc_dj_experiment
 
 dj.config["enable_python_native_blobs"] = True
 

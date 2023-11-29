@@ -3,10 +3,7 @@ import pickle
 from pathlib import Path
 
 import datajoint as dj
-import numpy as np
-from insilico_stimuli.stimuli import CenterSurround, GaborSet
-
-from experiments.exc_driven_model.exc_experiment import grating_dj_experiment
+from ..experiment_running.exc_experiment import grating_dj_experiment
 
 dj.config["enable_python_native_blobs"] = True
 
