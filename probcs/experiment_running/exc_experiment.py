@@ -170,6 +170,8 @@ def center_surround_experiment(
             cores=n_draws,
             pymc_logging=pymc_logging,
         )
+        # check if connection is still alive
+        dj.conn().ping()
         # append to idata
         idatas.append(mei_idata)
 
@@ -204,6 +206,8 @@ def center_surround_experiment(
             cores=n_draws,
             pymc_logging=pymc_logging,
         )
+        # check if connection is still alive
+        dj.conn().ping()
         # append to idata
         idatas.append(completing_idata)
         # compute center stats
@@ -252,6 +256,7 @@ def center_surround_experiment(
                 cores=n_draws,
                 pymc_logging=pymc_logging,
             )
+            dj.conn().ping()
             # append to idata
             idatas.append(disrupting_idata)
 
@@ -278,7 +283,6 @@ def center_surround_experiment(
             center_x_perc_change_means.append(disrupting_perc_change_mean_chains)
             center_x_perc_change_means_sde.append(disrupting_perc_change_sde_chains)
 
-            dj.conn().ping()
 
         all_idata.append(idatas)
         all_stimuli.append(stimuli)
