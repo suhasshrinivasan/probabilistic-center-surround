@@ -1,7 +1,7 @@
 import itertools as it
 from collections import OrderedDict
 
-from probcs.datajoint.exc_tables import ExcConfig, ExcResult2
+from probcs.datajoint.exc_tables import ExcConfig10Plus, ExcResult10Plus
 
 from probcs.utils.utils import make_hash
 
@@ -9,7 +9,7 @@ configs = OrderedDict(
     seed=[42],
     g_dim=[10, 20],
     g_prob=[1 / 10, 1/5],
-    x_sigma=[0.1],
+    x_sigma=[0.1, 1, 0.01],
     i_sigma=[20, 10, 5],
     patterns_offset=[0],
     n_tune=[500],
@@ -39,6 +39,6 @@ for values in it.product(*configs.values()):
     config["config_id"] = make_hash(config)
     config_list.append(config)
 
-ExcConfig.insert(config_list, skip_duplicates=True)
+ExcConfig10Plus.insert(config_list, skip_duplicates=True)
 # CenterExperimentResult.populate()
-ExcResult2.populate(reserve_jobs=True, order="random")
+ExcResult10Plus.populate(reserve_jobs=True, order="random")
