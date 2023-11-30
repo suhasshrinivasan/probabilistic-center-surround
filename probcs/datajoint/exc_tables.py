@@ -91,3 +91,130 @@ class ExcResult(dj.Computed):
 
         idata_filepath.unlink()
         stimuli_filepath.unlink()
+
+
+@schema
+class ExcResult2(dj.Computed):
+    definition = """
+    -> ExcConfig
+    ---
+    all_idata: attach@external
+    all_stimuli: attach@external
+    all_g_means: longblob
+    all_g_means_sde: longblob
+    all_center_x_means: longblob
+    all_center_x_means_sde: longblob 
+    all_center_x_perc_change_means: longblob
+    all_center_x_perc_change_means_sde: longblob
+    """
+
+    def make(self, key):
+        config = (ExcConfig & key).fetch1()
+        (
+            _,
+            all_idata,
+            all_stimuli,
+            all_g_means,
+            all_g_means_sde,
+            all_center_x_means,
+            all_center_x_means_sde,
+            all_center_x_perc_change_means,
+            all_center_x_perc_change_means_sde,
+        ) = exc_dj_experiment(**config)
+
+        idata_filepath = Path(f"/tmp/{key['config_id']}_idata.pkl")
+        with idata_filepath.open("wb") as f:
+            pickle.dump(all_idata, f)
+        key["all_idata"] = idata_filepath
+
+        stimuli_filepath = Path(f"/tmp/{key['config_id']}_stimuli.pkl")
+        with stimuli_filepath.open("wb") as f:
+            pickle.dump(all_stimuli, f)
+        key["all_stimuli"] = stimuli_filepath
+
+        key["all_g_means"] = all_g_means
+        key["all_g_means_sde"] = all_g_means_sde
+        key["all_center_x_means"] = all_center_x_means
+        key["all_center_x_means_sde"] = all_center_x_means_sde
+        key["all_center_x_perc_change_means"] = all_center_x_perc_change_means
+        key["all_center_x_perc_change_means_sde"] = all_center_x_perc_change_means_sde
+
+        self.insert1(key)
+
+        idata_filepath.unlink()
+        stimuli_filepath.unlink()
+
+
+@schema
+class ExcConfig10Plus(dj.Manual):
+    """
+    This table is for running experiments with g_dim >= 10
+    """
+    definition = """
+    config_id: char(32)
+    ---
+    seed: int   # random seed
+    g_dim: int  # dimensionality of G
+    g_prob: float   # Bernoulli probability of g_i being 1
+    x_sigma: float  # Laplace distribution scale parameter for x
+    i_sigma: float  # Normal distribution scale parameter for i
+    patterns_offset: float   # offset to increase cosine similarity between patterns
+    n_tune: int # number of tuning samples
+    n_draws: int    # number of samples to draw
+    n_chains: int  # number of chains
+    n_cores: int  # number of cores to use
+    """
+
+@schema
+class ExcResult10Plus(dj.Computed):
+    """
+    This table is for running experiments with g_dim >= 10
+    """
+    definition = """
+    -> ExcConfig10Plus
+    ---
+    all_idata: attach@external
+    all_stimuli: attach@external
+    all_g_means: longblob
+    all_g_means_sde: longblob
+    all_center_x_means: longblob
+    all_center_x_means_sde: longblob 
+    all_center_x_perc_change_means: longblob
+    all_center_x_perc_change_means_sde: longblob
+    """
+
+    def make(self, key):
+        config = (ExcConfig10Plus & key).fetch1()
+        (
+            _,
+            all_idata,
+            all_stimuli,
+            all_g_means,
+            all_g_means_sde,
+            all_center_x_means,
+            all_center_x_means_sde,
+            all_center_x_perc_change_means,
+            all_center_x_perc_change_means_sde,
+        ) = exc_dj_experiment(**config)
+
+        idata_filepath = Path(f"/tmp/{key['config_id']}_idata.pkl")
+        with idata_filepath.open("wb") as f:
+            pickle.dump(all_idata, f)
+        key["all_idata"] = idata_filepath
+
+        stimuli_filepath = Path(f"/tmp/{key['config_id']}_stimuli.pkl")
+        with stimuli_filepath.open("wb") as f:
+            pickle.dump(all_stimuli, f)
+        key["all_stimuli"] = stimuli_filepath
+
+        key["all_g_means"] = all_g_means
+        key["all_g_means_sde"] = all_g_means_sde
+        key["all_center_x_means"] = all_center_x_means
+        key["all_center_x_means_sde"] = all_center_x_means_sde
+        key["all_center_x_perc_change_means"] = all_center_x_perc_change_means
+        key["all_center_x_perc_change_means_sde"] = all_center_x_perc_change_means_sde
+
+        self.insert1(key)
+
+        idata_filepath.unlink()
+        stimuli_filepath.unlink()
