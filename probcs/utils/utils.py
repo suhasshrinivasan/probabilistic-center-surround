@@ -10,6 +10,8 @@ from torchvision import transforms
 from torchvision.datasets import DatasetFolder
 
 
+
+
 def load_images(
     dataset_folder_path="/src/project/data/natimgs/",
     crop_size=25,
@@ -83,3 +85,9 @@ def make_hash(obj):
         hashed.update(str(obj).encode())
 
     return hashed.hexdigest()
+
+def dj_error_msg(table, key_hash):
+    return (table & f"key_hash='{key_hash}'").fetch1("error_message")
+
+def dj_error_stack(table, key_hash):
+    return (table & f"key_hash='{key_hash}'").fetch1("error_stack")
