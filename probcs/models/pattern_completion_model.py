@@ -297,6 +297,8 @@ class PatternCompletionModel:
         Args:
             nrows (int): number of rows in the plot
             ncols (int): number of columns in the plot
+        Returns:
+            generated_Is (np.ndarray): generated images via one-hot encoded G
         Notes:
             The one-hot encoding is done by setting each dimension in G to 1 and
             setting the rest to 0.
@@ -361,12 +363,16 @@ class PatternCompletionModel:
             ax.axis("off")
         fig.suptitle("G pfs")
 
+        return generated_Is
+
     def visualize_learned_X(self, nrows, ncols):
         """
         Visualize learned X via one-hot encoding X and plotting resultant I.
         Args:
             nrows (int): number of rows in the plot
             ncols (int): number of columns in the plot
+        Returns:
+            generated_Is (np.ndarray): generated images via one-hot encoded X
         Notes:
             The one-hot encoding is done by setting each dimension in X to 1 and
             setting the rest to 0.
@@ -419,3 +425,5 @@ class PatternCompletionModel:
             ax.axis("off")
         # write a figure title as "X pfs"
         fig.suptitle("X pfs")
+
+        return generated_Is

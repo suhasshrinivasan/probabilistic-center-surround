@@ -8,6 +8,95 @@ from ..models.pattern_completion_model import PatternCompletionModel
 import datajoint as dj
 
 
+def create_stimuli(patterns):
+    """
+    Generate stimuli for a set of input patterns.
+
+    Parameters:
+    - patterns (numpy.ndarray): A 3D numpy array representing a collection of input patterns.
+        Dimensions should be (num_patterns, height, width).
+
+    Returns:
+    - MEIs (list of numpy.ndarray): List of Modified Encoded Images, where each MEI
+        isolates the central region within each pattern.
+    - completing_patterns (list of numpy.ndarray): List of patterns identical to the input patterns.
+    - disrupting_patterns_1 (list of numpy.ndarray): List of patterns where the central region
+        is replaced by the corresponding central region of a different pattern in the set.
+    - disrupting_patterns_2 (list of numpy.ndarray): List of patterns where the central region
+        is replaced by the difference between the corresponding pattern and a different pattern.
+    - disrupting_pattern_indices (list of int): List of indices indicating which pattern
+        is used to disrupt the current pattern in disrupting_patterns_1 and disrupting_patterns_2.
+
+    Note:
+    - The function assumes that the input patterns are square (height == width).
+    - The central region for modification is defined as the area within each pattern.
+    - MEIs are created by copying the central region from the original patterns into a zero-initialized array.
+    - Completing patterns are identical copies of the input patterns.
+    - Disrupting patterns are created by replacing or modifying the central region of the input patterns
+        using similarity measures.
+
+    Example:
+    >>> patterns = np.random.rand(5, 28, 28)  # Assuming 5 patterns of size 28x28
+    >>> MEIs, completing_patterns, disrupting_patterns_1, disrupting_patterns_2, disrupting_pattern_indices = create_stimuli(patterns)
+    """
+    MEIs = []
+    completing_patterns = []
+    disrupting_patterns_1 = []
+    disrupting_patterns_2 = []
+    disrupting_pattern_indices = []
+    h, w = patterns.shape[1:]
+    central_region_start = h // 3
+    central_region_end = 2 * h // 3
+    for pattern in patterns:
+        MEI = np.zeros((h, w))
+        MEI[
+            central_region_start:central_region_end,
+            central_region_start:central_region_end,
+        ] = pattern[
+            central_region_start:central_region_end,
+            central_region_start:central_region_end,
+        ].copy()
+        MEIs.append(MEI)
+
+        completing_pattern = pattern.copy()
+        completing_patterns.append(completing_pattern)
+
+        cossim = cosine_similarity(
+            completing_pattern.reshape(1, -1), patterns.reshape(patterns.shape[0], -1)
+        )
+
+        disrupting_pattern_idx = np.argsort(cossim)[0][-2]
+
+        disrupting_pattern_indices.append(disrupting_pattern_idx)
+        disrupting_pattern_1 = patterns[disrupting_pattern_idx].copy()
+        disrupting_pattern_1[
+            central_region_start:central_region_end,
+            central_region_start:central_region_end,
+        ] = pattern[
+            central_region_start:central_region_end,
+            central_region_start:central_region_end,
+        ].copy()
+        disrupting_patterns_1.append(disrupting_pattern_1)
+
+        disrupting_pattern_2 = patterns[disrupting_pattern_idx].copy() - pattern
+        disrupting_pattern_2[
+            central_region_start:central_region_end,
+            central_region_start:central_region_end,
+        ] = pattern[
+            central_region_start:central_region_end,
+            central_region_start:central_region_end,
+        ].copy()
+        disrupting_patterns_2.append(disrupting_pattern_2)
+
+    return (
+        MEIs,
+        completing_patterns,
+        disrupting_patterns_1,
+        disrupting_patterns_2,
+        disrupting_pattern_indices,
+    )
+
+
 def get_center_x_mean(idata, center_x_id):
     """
     Get the mean of the center x posterior distribution from an idata object
@@ -282,7 +371,6 @@ def center_surround_experiment(
             )
             center_x_perc_change_means.append(disrupting_perc_change_mean_chains)
             center_x_perc_change_means_sde.append(disrupting_perc_change_sde_chains)
-
 
         all_idata.append(idatas)
         all_stimuli.append(stimuli)
