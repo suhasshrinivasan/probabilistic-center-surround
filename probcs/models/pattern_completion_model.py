@@ -49,23 +49,25 @@ class PatternCompletionModel:
         self.G_dim = self.patterns.shape[0]
         # construct the model
         self.prob_model = pm.Model()
+
+        g_p = pt.as_tensor_variable([G_prob] * self.G_dim)
+        g_x_mapping = pt.as_tensor_variable(self.G_X_mapping)
+        x_i_mapping = pt.as_tensor_variable(self.X_I_mapping)
+        x_sigma = pt.as_tensor_variable([X_sigma])
+        i_sigma = pt.as_tensor_variable([I_sigma])
         with self.prob_model:
-            G = pm.Bernoulli("G", p=[G_prob] * self.G_dim, shape=self.G_dim)
-            # G = pm.Categorical("G", p=[G_prob] * self.G_dim, shape=self.G_dim)
-
-            X_mu = pm.Deterministic("X_mu", self.G_X_mapping @ G)
-            X_sigma = pm.Deterministic("X_sigma", pt.as_tensor_variable([X_sigma]))
+            G = pm.Bernoulli("G", p=g_p, shape=self.G_dim)
+            X_mu = pm.Deterministic("X_mu", g_x_mapping @ G)
+            X_sigma = pm.Deterministic("X_sigma", x_sigma)
             X = pm.Laplace("X", mu=X_mu, b=X_sigma)
-            # X = pm.Exponential("X", lam=1 / X_mu)
-
-            I_mu = pm.Deterministic("I_mu", self.X_I_mapping @ X)
-            I_sigma = pm.Deterministic("I_sigma", pt.as_tensor_variable([I_sigma]))
+            I_mu = pm.Deterministic("I_mu", x_i_mapping @ X)
+            I_sigma = pm.Deterministic("I_sigma", i_sigma)
             # obs is a placeholder for the observed image
             obs = pm.MutableData("obs", np.zeros(self.I_dim))
             I = pm.Normal(
                 "I",
                 mu=I_mu,
-                sigma=I_sigma,
+                sigma=i_sigma,
                 observed=obs,
             )
 
