@@ -3,18 +3,19 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pickle
-from probcs.datajoint.exc_tables import ExcConfig, ExcResult, schema
+
+# from probcs.datajoint.exc_tables import ExcConfig, ExcResult, schema
 from probcs.datajoint.grating_tables import GratingConfig, GratingResult2
 
 
 # %%
 
-config_table = ExcConfig()
+config_table = GratingConfig()
 
-result = config_table * ExcResult()
+result = config_table * GratingResult2()
 
 g_dim_restr = 4
-
+# %%
 df = result.fetch(download_path="/tmp", as_dict=True)
 # %%
 
@@ -83,7 +84,7 @@ fig.supxlabel("Stimulus type", fontsize=xlabel_fontsize)
 fig.supylabel("Percentage change in mean response w.r.t MEI", fontsize=ylabel_fontsize)
 fig.suptitle(f"Surround modulation using {g_type}", fontsize=title_fontsize)
 
-#%%
+# %%
 fig_stimuli, axs_stimuli = plt.subplots(
     nrows=g_dim_restr,
     ncols=g_dim_restr + 1,
@@ -97,6 +98,6 @@ for ax_idx, axs_row_stimuli in enumerate(axs_stimuli[0].flatten()):
     stimulus_set = all_stimuli[ax_idx]
     for stimulus, ax in zip(stimulus_set, axs_row_stimuli.flatten()):
         ax.imshow(stimulus, cmap="gray")
-        ax.axis('off')
+        ax.axis("off")
 
     # %%

@@ -1,9 +1,13 @@
+# %%
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import pickle
+from probcs.datajoint.exc_tables import ExcExponentResult, ExcExponentConfig, schema
 
 
-def plot_posterior(G_dim, disrupting_pattern_indices, all_idata):
+# %%
+def plot_posterior_half(G_dim, disrupting_pattern_indices, all_idata):
     """
     Plots posterior distributions of latent variables G and X for MEI,
     Completing, and two Disrupting patterns.
@@ -26,9 +30,13 @@ def plot_posterior(G_dim, disrupting_pattern_indices, all_idata):
     """
 
     fig, axs = plt.subplots(
-        G_dim, 8, figsize=(8 * 4, 3 * 4), tight_layout=True, sharex="col", sharey="row"
+        G_dim,
+        2,
+        figsize=((2 + 3) * 2, (G_dim + 3) * 2),
+        tight_layout=True,
+        sharex="col",
     )
-    legend_size = 6
+    legend_size = 10
     possible_center_x_ids = [4 * G_dim + i for i in range(G_dim)]
     completing_perc_diff_list = []
     disrupting_1_perc_diff_list = []
@@ -82,46 +90,6 @@ def plot_posterior(G_dim, disrupting_pattern_indices, all_idata):
         mei_g_samples = mei_idata["posterior"]["G"].data.mean(axis=0).mean(axis=0)
         # mei_g_samples.shape = (n_G_dims,)
 
-        colors = plt.cm.tab10(range(len(completing_surround_x_ids)))
-        for completing_surround_index, completing_surround_x_id in enumerate(
-            completing_surround_x_ids
-        ):
-            completing_surround_x_samples = (
-                completing_idata["posterior"]["X"]
-                .data[:, :, completing_surround_x_id]
-                .flatten()
-            )
-            sns.histplot(
-                completing_surround_x_samples,
-                ax=ax_set[2],
-                stat="density",
-                color=colors[completing_surround_index],
-                element="step",
-                alpha=0.3,
-                label=f"{completing_surround_x_id}",
-            )
-            # ax_set[2].legend(prop={'size': legend_size}, loc="upper left")
-
-        colors = plt.cm.tab20(range(len(not_completing_surround_x_ids)))
-        for not_completing_surround_index, not_completing_surround_x_id in enumerate(
-            not_completing_surround_x_ids
-        ):
-            not_completing_surround_x_samples = (
-                completing_idata["posterior"]["X"]
-                .data[:, :, not_completing_surround_x_id]
-                .flatten()
-            )
-            sns.histplot(
-                not_completing_surround_x_samples,
-                ax=ax_set[3],
-                stat="density",
-                color=colors[not_completing_surround_index],
-                element="step",
-                alpha=0.3,
-                label=f"{not_completing_surround_x_id}",
-            )
-            # ax_set[3].legend(prop={'size': legend_size}, loc="upper left")
-
         completing_x_samples = (
             completing_idata["posterior"]["X"].data[:, :, center_x_id].flatten()
         )
@@ -152,7 +120,7 @@ def plot_posterior(G_dim, disrupting_pattern_indices, all_idata):
             disrupting_1_x_samples,
             ax=ax_set[0],
             stat="density",
-            color="orange",
+            color="brown",
             element="step",
             alpha=0.3,
             label="Disrupting 1",
@@ -182,76 +150,6 @@ def plot_posterior(G_dim, disrupting_pattern_indices, all_idata):
             disrupting_2_idata["posterior"]["G"].data.mean(axis=0).mean(axis=0)
         )
 
-        colors = plt.cm.tab10(range(len(disrupting_surround_x_ids)))
-        for disrupting_surround_index, disrupting_surround_x_id in enumerate(
-            disrupting_surround_x_ids
-        ):
-            disrupting_1_surround_x_samples = (
-                disrupting_1_idata["posterior"]["X"]
-                .data[:, :, disrupting_surround_x_id]
-                .flatten()
-            )
-            sns.histplot(
-                disrupting_1_surround_x_samples,
-                ax=ax_set[4],
-                stat="density",
-                color=colors[disrupting_surround_index],
-                element="step",
-                alpha=0.3,
-                label=f"{disrupting_surround_x_id}",
-            )
-            # ax_set[4].legend(prop={'size': legend_size}, loc="upper left")
-            disrupting_2_surround_x_samples = (
-                disrupting_2_idata["posterior"]["X"]
-                .data[:, :, disrupting_surround_x_id]
-                .flatten()
-            )
-            sns.histplot(
-                disrupting_2_surround_x_samples,
-                ax=ax_set[6],
-                stat="density",
-                color=colors[disrupting_surround_index],
-                element="step",
-                alpha=0.3,
-                label=f"{disrupting_surround_x_id}",
-            )
-            # ax_set[6].legend(prop={'size': legend_size}, loc="upper left")
-
-        colors = plt.cm.tab20(range(len(not_disrupting_surround_x_ids)))
-        for not_disrupting_surround_index, not_disrupting_surround_x_id in enumerate(
-            not_disrupting_surround_x_ids
-        ):
-            not_disrupting_1_surround_x_samples = (
-                disrupting_1_idata["posterior"]["X"]
-                .data[:, :, not_disrupting_surround_x_id]
-                .flatten()
-            )
-            sns.histplot(
-                not_disrupting_1_surround_x_samples,
-                ax=ax_set[5],
-                stat="density",
-                color=colors[not_disrupting_surround_index],
-                element="step",
-                alpha=0.3,
-                label=f"{not_disrupting_surround_x_id}",
-            )
-            # ax_set[5].legend(prop={'size': legend_size}, loc="upper left")
-            not_disrupting_2_surround_x_samples = (
-                disrupting_2_idata["posterior"]["X"]
-                .data[:, :, not_disrupting_surround_x_id]
-                .flatten()
-            )
-            sns.histplot(
-                not_disrupting_2_surround_x_samples,
-                ax=ax_set[7],
-                stat="density",
-                color=colors[not_disrupting_surround_index],
-                element="step",
-                alpha=0.3,
-                label=f"{not_disrupting_surround_x_id}",
-            )
-            # ax_set[7].legend(prop={'size': legend_size}, loc="upper left")
-
         ax_set[1].bar(x=np.arange(G_dim), height=mei_g_samples, width=0.8, color="blue")
         ax_set[1].bar(
             x=np.arange(G_dim) + G_dim,
@@ -263,7 +161,7 @@ def plot_posterior(G_dim, disrupting_pattern_indices, all_idata):
             x=np.arange(G_dim) + G_dim * 2,
             height=disrupting_1_g_samples,
             width=0.8,
-            color="orange",
+            color="brown",
         )
         ax_set[1].bar(
             x=np.arange(G_dim) + G_dim * 3,
@@ -302,7 +200,7 @@ def plot_posterior(G_dim, disrupting_pattern_indices, all_idata):
             ha="left",
             va="bottom",
             transform=ax_set[0].transAxes,
-            color="orange",
+            color="brown",
         )
         ax_set[0].text(
             0.7,
@@ -327,7 +225,7 @@ def plot_posterior(G_dim, disrupting_pattern_indices, all_idata):
         )
         ax_set[0].axvline(
             disrupting_1_x_mean,
-            color="orange",
+            color="brown",
             linestyle="--",
             linewidth=1,
             label="disrupting 1 $\mu$",
@@ -354,11 +252,12 @@ def plot_posterior(G_dim, disrupting_pattern_indices, all_idata):
     )
 
 
+# %%
 def plot_samples_relative_mei(
     G_dim, disrupting_pattern_indices, all_idata, xlim=(0.6, 1.3), xticks=[0.6, 1.3]
 ):
     colors = plt.cm.tab10(range(len(all_idata)))
-    fig, axs = plt.subplots(nrows=1, ncols=3, dpi=300, sharey=True)
+    fig, axs = plt.subplots(nrows=1, ncols=3, dpi=300, sharey=True, tight_layout=True)
     for idx, (idata_set, disrupting_pattern_idx) in enumerate(
         zip(all_idata, disrupting_pattern_indices)
     ):
@@ -497,3 +396,53 @@ def plot_samples_relative_mei(
         axs[2].set_ylabel("Response to disrupting 2 pattern", fontsize=8)
 
     return fig, axs
+
+
+# %%
+# from probcs.utils.plotting import plot_posterior, plot_samples_relative_mei
+
+# %%
+results = ExcExponentConfig() * ExcExponentResult()
+# %%
+key_results = results.fetch(
+    "config_id",
+    "average_exc",
+    "average_inh_1",
+    "average_inh_2",
+    order_by="average_inh_1",
+    as_dict=True,
+)
+# %%
+highest_inh_1_config_id = key_results[0]["config_id"]
+# '32645fb5a995f73c4aba131b1c598425'
+# %%
+highest_inh_1_results = (results & {"config_id": highest_inh_1_config_id}).fetch(
+    download_path="/tmp", as_dict=True
+)
+# %%
+with open(highest_inh_1_results[0]["all_idata"], "rb") as f:
+    all_idata = pickle.load(f)
+# %%
+g_dim = highest_inh_1_results[0]["g_dim"]
+disrupting_pattern_indices = highest_inh_1_results[0]["disrupting_pattern_indices"]
+
+(
+    fig,
+    axs,
+    completing_perc_diff_list,
+    disrupting_1_perc_diff_list,
+    disrupting_2_perc_diff_list,
+) = plot_posterior_half(
+    all_idata=all_idata,
+    disrupting_pattern_indices=disrupting_pattern_indices,
+    G_dim=g_dim,
+)
+# %%
+fig_samples, axs_samples = plot_samples_relative_mei(
+    all_idata=all_idata,
+    disrupting_pattern_indices=disrupting_pattern_indices,
+    G_dim=g_dim,
+    xlim=(0.3, 1.4),
+    xticks=[0.3, 1.4],
+)
+# %%

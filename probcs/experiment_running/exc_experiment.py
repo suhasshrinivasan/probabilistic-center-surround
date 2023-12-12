@@ -3,9 +3,11 @@ from pathlib import Path
 import numpy as np
 from insilico_stimuli.stimuli import CenterSurround
 from sklearn.metrics.pairwise import cosine_similarity
-
+from ..utils.plotting import plot_posterior, plot_samples_relative_mei
 from ..models.pattern_completion_model import PatternCompletionModel
 import datajoint as dj
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def create_stimuli(patterns):
@@ -509,4 +511,211 @@ def grating_dj_experiment(
         n_draws=n_draws,
         n_chains=n_chains,
         n_cores=n_cores,
+    )
+
+
+def exc_exponent_experiment(
+    config_id,
+    seed,
+    g_dim,
+    g_prob,
+    x_sigma,
+    i_sigma,
+    patterns_offset,
+    g_x_exponent,
+    n_tune,
+    n_draws,
+    n_chains,
+    n_cores,
+):
+    """
+    Parameters:
+    - config_id (int): Identifier for the configuration.
+    - seed (int): Random seed for reproducibility.
+    - g_dim (int): Dimensionality of the pattern space.
+    - g_prob (float): Probability of G in the model.
+    - x_sigma (float): Sigma parameter for X in the model.
+    - i_sigma (float): Sigma parameter for I in the model.
+    - patterns_offset (float): Offset for patterns in the model.
+    - g_x_exponent (float): Exponent for G-X mapping in the model.
+    - n_tune (int): Number of tuning steps for model sampling.
+    - n_draws (int): Number of draws for model sampling.
+    - n_chains (int): Number of chains for model sampling.
+    - n_cores (int): Number of CPU cores for parallel processing.
+
+    Returns:
+    Tuple containing various results and visualizations from the experiment.
+    - all_idata (list): List of InferenceData objects from the experiment.
+    - all_stimuli (list): List of stimuli used in the experiment.
+    - average_exc (float): Average percentage difference for completing patterns.
+    - average_inh_1 (float): Average percentage difference for disrupting pattern 1.
+    - average_inh_2 (float): Average percentage difference for disrupting pattern 2.
+    - fig_g_stimuli (matplotlib.figure.Figure): Figure visualizing patterns used in the experiment.
+    - fig_cossim_g (matplotlib.figure.Figure): Figure showing cosine similarity between assigned Gs.
+    - list_fig_stimuli (list): List of figures visualizing stimuli.
+    - fig_g_x_map (matplotlib.figure.Figure): Figure visualizing G-X map.
+    - fig_posterior (matplotlib.figure.Figure): Figure visualizing posterior distribution.
+    - fig_samples (matplotlib.figure.Figure): Figure visualizing model samples relative to MEI.
+    """
+    # first load data
+    # TODO: parameterize this
+    exc_fname = Path("/src/project/data/experiment/exc_images_preprocessed.npy")
+    exc_images = np.load(exc_fname)
+    exc_images_mean = exc_images.mean(axis=0)
+    exc_images = exc_images - exc_images_mean
+    vmin = exc_images.min()
+    vmax = exc_images.max()
+
+    if g_dim != 5:
+        raise ValueError("g_dim must be 5 for this experiment")
+
+    # hardcoded pattern indices for control
+    patterns = exc_images[[0, 1, 3, 8, 9]]
+
+    # patterns = exc_images[[0, 1, 8]]
+
+    assert len(patterns) == g_dim
+
+    # # visualize patterns
+    # fig_g_stimuli, axs = plt.subplots(1, g_dim, figsize=(g_dim * 4, 4))
+    # for ax, pattern in zip(axs.flatten(), patterns):
+    #     ax.imshow(pattern, cmap="gray", vmin=vmin, vmax=vmax)
+    #     ax.axis("off")
+
+    # build model
+    model = PatternCompletionModel(
+        patterns=patterns,
+        G_prob=g_prob,
+        X_sigma=x_sigma,
+        I_sigma=i_sigma,
+        patterns_offset=patterns_offset,
+        G_X_exponent=g_x_exponent,
+    )
+
+    # # compute cosine similarity between patterns
+    # cossim = cosine_similarity(model.patterns.reshape(model.patterns.shape[0], -1))
+    # fig_cossim_g, ax = plt.subplots(dpi=100)
+    # sns.heatmap(cossim, vmin=-1, vmax=1, annot=True, fmt=".2f", ax=ax)
+    # ax.set_title("Cos sim between assigned Gs")
+
+    # create stimuli
+    (
+        MEIs,
+        completing_patterns,
+        disrupting_patterns_1,
+        disrupting_patterns_2,
+        disrupting_pattern_indices,
+    ) = create_stimuli(patterns)
+
+    # # visualize stimuli
+    # list_fig_stimuli = []
+    # for MEI, completing_pattern, disrupting_pattern_1, disrupting_pattern_2 in zip(
+    #     MEIs, completing_patterns, disrupting_patterns_1, disrupting_patterns_2
+    # ):
+    #     fig, axs = plt.subplots(1, 4, dpi=300)
+    #     axs[0].imshow(MEI, cmap="gray", vmin=vmin, vmax=vmax)
+    #     axs[0].axis("off")
+    #     axs[1].imshow(completing_pattern, cmap="gray", vmin=vmin, vmax=vmax)
+    #     axs[1].axis("off")
+    #     axs[2].imshow(disrupting_pattern_1, cmap="gray", vmin=vmin, vmax=vmax)
+    #     axs[2].axis("off")
+    #     axs[3].imshow(disrupting_pattern_2, cmap="gray", vmin=vmin, vmax=vmax)
+    #     axs[3].axis("off")
+    #     list_fig_stimuli.append(fig)
+
+    # # visualize G-X map
+    # fig_g_x_map, ax = plt.subplots(dpi=300)
+    # ax.imshow(model.G_X_mapping.T, cmap="seismic", vmin=-1, vmax=1)
+    # ax.set_xticks(np.arange(g_dim * 9))
+    # ax.set_xticklabels(np.arange(g_dim * 9))
+    # ax.set_yticks(np.arange(g_dim))
+    # ax.set_yticklabels(np.arange(g_dim))
+    # ax.tick_params(axis="both", which="major", labelsize=6)
+    # # draw a small horizontal colorbar
+    # cbar = fig.colorbar(
+    #     ax.get_images()[0], ax=ax, orientation="horizontal", pad=0.1, aspect=100
+    # )
+
+    all_idata = []
+    for MEI, completing_pattern, disrupting_pattern_1, disrupting_pattern_2 in zip(
+        MEIs, completing_patterns, disrupting_patterns_1, disrupting_patterns_2
+    ):
+        idata_set = []
+        idata = model(
+            image=MEI,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        idata = model(
+            image=completing_pattern,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        idata = model(
+            image=disrupting_pattern_1,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        idata = model(
+            image=disrupting_pattern_2,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        all_idata.append(idata_set)
+
+    (
+        fig_posterior,
+        axs,
+        completing_perc_diff_list,
+        disrupting_1_perc_diff_list,
+        disrupting_2_perc_diff_list,
+    ) = plot_posterior(
+        G_dim=g_dim,
+        disrupting_pattern_indices=disrupting_pattern_indices,
+        all_idata=all_idata,
+    )
+
+    average_exc = np.mean(completing_perc_diff_list)
+    average_inh_1 = np.mean(disrupting_1_perc_diff_list)
+    average_inh_2 = np.mean(disrupting_2_perc_diff_list)
+
+    # fig_samples, _ = plot_samples_relative_mei(
+    #     G_dim=g_dim,
+    #     disrupting_pattern_indices=disrupting_pattern_indices,
+    #     all_idata=all_idata,
+    # )
+
+    all_stimuli = list(
+        [
+            MEIs,
+            completing_patterns,
+            disrupting_patterns_1,
+            disrupting_patterns_2,
+            disrupting_pattern_indices,
+        ]
+    )
+
+    return (
+        all_idata,
+        all_stimuli,
+        average_exc,
+        average_inh_1,
+        average_inh_2,
+        disrupting_pattern_indices,
     )

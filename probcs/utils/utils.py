@@ -79,18 +79,20 @@ def load_images(
     crop_size=25,
     n_samples=20_000,
     seed=0,
+    transform=transforms.RandomCrop(25),
 ):
     torch.manual_seed(seed)
-    transform = transforms.RandomCrop(crop_size)
+    # transform = transforms.RandomCrop(crop_size)
+
     dataset = DatasetFolder(
         root=dataset_folder_path,
-        loader=lambda path: torch.from_numpy(np.load(path)),
+        loader=lambda path: torch.from_numpy(np.load(path)).unsqueeze(0),
         extensions=".npy",
         transform=transform,
     )
     dataloader = DataLoader(dataset, batch_size=dataset.__len__())
     images, labels = next(iter(dataloader))
-    return images.numpy()[:n_samples]
+    return images.squeeze(1).numpy()[:n_samples]
 
 
 def sqcrop_and_resize(images, size=(36, 36), anti_aliasing=False):

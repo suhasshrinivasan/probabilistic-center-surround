@@ -17,7 +17,15 @@ class PatternCompletionModel:
     The model is programmed in PyMC3.
     """
 
-    def __init__(self, patterns, G_prob, X_sigma, I_sigma, patterns_offset=0):
+    def __init__(
+        self,
+        patterns,
+        G_prob,
+        X_sigma,
+        I_sigma,
+        patterns_offset=0,
+        G_X_exponent=1,
+    ):
         """
         Args:
             patterns (np.ndarray): patterns to compose
@@ -44,12 +52,16 @@ class PatternCompletionModel:
         self.I_patch_side = int(np.sqrt(self.I_patch_dim))
         self.I_dim = self.X_I_mapping.shape[0]
         self.I_side = int(np.sqrt(self.I_dim))
+        self.G_X_exponent = G_X_exponent
         # construct mapping from G to X
         self.G_X_mapping = self._construct_G_X_mapping()
         self.G_dim = self.patterns.shape[0]
         # construct the model
         self.prob_model = pm.Model()
 
+        # if isinstance(G_prob, list):
+        #     g_p = pt.as_tensor_variable(G_prob)
+        # else:
         g_p = pt.as_tensor_variable([G_prob] * self.G_dim)
         g_x_mapping = pt.as_tensor_variable(self.G_X_mapping)
         x_i_mapping = pt.as_tensor_variable(self.X_I_mapping)
@@ -57,6 +69,11 @@ class PatternCompletionModel:
         i_sigma = pt.as_tensor_variable([I_sigma])
         with self.prob_model:
             G = pm.Bernoulli("G", p=g_p, shape=self.G_dim)
+            # G = pm.Categorical(
+            #     "G",
+            #     p=g_p,
+            #     shape=self.G_dim,
+            # )
             X_mu = pm.Deterministic("X_mu", g_x_mapping @ G)
             X_sigma = pm.Deterministic("X_sigma", x_sigma)
             X = pm.Laplace("X", mu=X_mu, b=X_sigma)
@@ -291,7 +308,7 @@ class PatternCompletionModel:
         cos_sim_matrix = np.array(cos_sim_matrix)
         # convert the (9, N_x, N) cosine similarity matrix into (9 * N_x, N) matrix
         G_X_mapping = cos_sim_matrix.reshape((-1, cos_sim_matrix.shape[-1]))
-        return G_X_mapping
+        return np.sign(G_X_mapping) * np.abs(G_X_mapping) ** self.G_X_exponent
 
     def visualize_learned_G(self, nrows=None, ncols=None):
         """
@@ -429,3 +446,57 @@ class PatternCompletionModel:
         fig.suptitle("X pfs")
 
         return generated_Is
+
+
+
+class ExpPatternCompletionModel(PatternCompletionModel):
+    """
+    Same as PatternCompletionModel but with an exponential distribution for X.
+    """
+    def __init__(
+        self,
+        patterns,
+        G_prob,
+        X_sigma,
+        I_sigma,
+        patterns_offset=0,
+        G_X_exponent=1,
+        scale_offset=2,
+        scale_exponent=1
+    ):
+        """
+        Same as PatternCompletionModel but with one additional parameter:
+            scale_offset (float): offset to add to the mapping from G to X
+                This offset is added to the mapping from G to X to induce
+                a positive scale parameter for the exponential distribution
+                of X.
+        """
+        super().__init__(
+            patterns,
+            G_prob,
+            X_sigma,
+            I_sigma,
+            patterns_offset=patterns_offset,
+            G_X_exponent=G_X_exponent,
+        )
+        self.scale_offset = scale_offset
+        self.scale_exponent = scale_exponent
+        self.prob_model = pm.Model()
+        g_p = pt.as_tensor_variable([G_prob] * self.G_dim)
+        g_x_mapping = pt.as_tensor_variable(self.G_X_mapping)
+        x_i_mapping = pt.as_tensor_variable(self.X_I_mapping)
+        i_sigma = pt.as_tensor_variable([I_sigma])
+        with self.prob_model:
+            G = pm.Bernoulli("G", p=g_p, shape=self.G_dim)
+            X_scale = pm.Deterministic("X_mu", (self.scale_offset + (g_x_mapping @ G)) ** self.scale_exponent)
+            X = pm.Exponential("X", scale=X_scale)
+            I_mu = pm.Deterministic("I_mu", x_i_mapping @ X)
+            I_sigma = pm.Deterministic("I_sigma", i_sigma)
+            # obs is a placeholder for the observed image
+            obs = pm.MutableData("obs", np.zeros(self.I_dim))
+            I = pm.Normal(
+                "I",
+                mu=I_mu,
+                sigma=i_sigma,
+                observed=obs,
+            )
