@@ -3,8 +3,15 @@ from pathlib import Path
 import numpy as np
 from insilico_stimuli.stimuli import CenterSurround
 from sklearn.metrics.pairwise import cosine_similarity
-from ..utils.plotting import plot_posterior, plot_samples_relative_mei
-from ..models.pattern_completion_model import PatternCompletionModel
+from ..utils.plotting import (
+    plot_posterior,
+    plot_samples_relative_mei,
+    plot_posterior_binary,
+)
+from ..models.pattern_completion_model import (
+    PatternCompletionModel,
+    BinaryPatternCompletionModel,
+)
 import datajoint as dj
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -527,6 +534,8 @@ def exc_exponent_experiment(
     n_draws,
     n_chains,
     n_cores,
+    exc_fname="/src/project/data/experiment/exc_images_preprocessed.npy",
+    exc_image_ids=[0, 1, 3, 8, 9],
 ):
     """
     Parameters:
@@ -559,7 +568,6 @@ def exc_exponent_experiment(
     """
     # first load data
     # TODO: parameterize this
-    exc_fname = Path("/src/project/data/experiment/exc_images_preprocessed.npy")
     exc_images = np.load(exc_fname)
     exc_images_mean = exc_images.mean(axis=0)
     exc_images = exc_images - exc_images_mean
@@ -570,7 +578,10 @@ def exc_exponent_experiment(
         raise ValueError("g_dim must be 5 for this experiment")
 
     # hardcoded pattern indices for control
-    patterns = exc_images[[0, 1, 3, 8, 9]]
+    if exc_image_ids is not None:
+        patterns = exc_images[exc_image_ids]
+    else:
+        patterns = exc_images
 
     # patterns = exc_images[[0, 1, 8]]
 
@@ -717,5 +728,343 @@ def exc_exponent_experiment(
         average_exc,
         average_inh_1,
         average_inh_2,
+        disrupting_pattern_indices,
+    )
+
+
+def bernoulli_experiment(
+    config_id,
+    seed,
+    g_dim,
+    g_prob,
+    i_sigma,
+    patterns_offset,
+    offset_x_1,
+    offset_x_2,
+    scale_x,
+    exponent_x,
+    n_tune,
+    n_draws,
+    n_chains,
+    n_cores,
+    exc_fname="/src/project/data/experiment/exc_images_preprocessed.npy",
+    exc_image_ids=[0, 1, 3, 8, 9],
+):
+    """
+    Parameters:
+    - config_id (int): Identifier for the configuration.
+    - seed (int): Random seed for reproducibility.
+    - g_dim (int): Dimensionality of the pattern space.
+    - g_prob (float): Probability of G in the model.
+    - i_sigma (float): Sigma parameter for I in the model.
+    - patterns_offset (float): Offset for patterns in the model.
+    - offset_x_1 (float): Offset for X in the model for disrupting pattern 1.
+    - offset_x_2 (float): Offset for X in the model for disrupting pattern 2.
+    - scale_x (float): Scale for X in the model.
+    - exponent_x (float): Exponent for X in the model.
+    - n_tune (int): Number of tuning steps for model sampling.
+    - n_draws (int): Number of draws for model sampling.
+    - n_chains (int): Number of chains for model sampling.
+    - n_cores (int): Number of CPU cores for parallel processing.
+
+    Returns:
+    Tuple containing various results and visualizations from the experiment.
+    - all_idata (list): List of InferenceData objects from the experiment.
+    - all_stimuli (list): List of stimuli used in the experiment.
+    - average_exc (float): Average percentage difference for completing patterns.
+    - average_inh_1 (float): Average percentage difference for disrupting pattern 1.
+    - average_inh_2 (float): Average percentage difference for disrupting pattern 2.
+    - fig_g_stimuli (matplotlib.figure.Figure): Figure visualizing patterns used in the experiment.
+    - fig_cossim_g (matplotlib.figure.Figure): Figure showing cosine similarity between assigned Gs.
+    - list_fig_stimuli (list): List of figures visualizing stimuli.
+    - fig_g_x_map (matplotlib.figure.Figure): Figure visualizing G-X map.
+    - fig_posterior (matplotlib.figure.Figure): Figure visualizing posterior distribution.
+    - fig_samples (matplotlib.figure.Figure): Figure visualizing model samples relative to MEI.
+    """
+    # first load data
+    # TODO: parameterize this
+    exc_images = np.load(exc_fname)
+    exc_images_mean = exc_images.mean(axis=0)
+    exc_images = exc_images - exc_images_mean
+    vmin = exc_images.min()
+    vmax = exc_images.max()
+
+    if g_dim != 5:
+        raise ValueError("g_dim must be 5 for this experiment")
+
+    # hardcoded pattern indices for control
+    if exc_image_ids is not None:
+        patterns = exc_images[exc_image_ids]
+    else:
+        patterns = exc_images
+
+    # patterns = exc_images[[0, 1, 8]]
+
+    assert len(patterns) == g_dim
+
+    # # visualize patterns
+    # fig_g_stimuli, axs = plt.subplots(1, g_dim, figsize=(g_dim * 4, 4))
+    # for ax, pattern in zip(axs.flatten(), patterns):
+    #     ax.imshow(pattern, cmap="gray", vmin=vmin, vmax=vmax)
+    #     ax.axis("off")
+
+    # build model
+    model = BinaryPatternCompletionModel(
+        patterns=patterns,
+        G_prob=g_prob,
+        I_sigma=i_sigma,
+        patterns_offset=patterns_offset,
+        offset_x_1=offset_x_1,
+        offset_x_2=offset_x_2,
+        scale_x=scale_x,
+        exponent_x=exponent_x,
+    )
+    # create stimuli
+    (
+        MEIs,
+        completing_patterns,
+        disrupting_patterns_1,
+        disrupting_patterns_2,
+        disrupting_pattern_indices,
+    ) = create_stimuli(patterns)
+
+    all_idata = []
+    for MEI, completing_pattern, disrupting_pattern_1, disrupting_pattern_2 in zip(
+        MEIs, completing_patterns, disrupting_patterns_1, disrupting_patterns_2
+    ):
+        idata_set = []
+        idata = model(
+            image=MEI,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        idata = model(
+            image=completing_pattern,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        idata = model(
+            image=disrupting_pattern_1,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        idata = model(
+            image=disrupting_pattern_2,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        all_idata.append(idata_set)
+
+    (
+        fig_posterior,
+        axs,
+        completing_perc_diff_list,
+        disrupting_1_perc_diff_list,
+        disrupting_2_perc_diff_list,
+    ) = plot_posterior_binary(
+        G_dim=g_dim,
+        disrupting_pattern_indices=disrupting_pattern_indices,
+        all_idata=all_idata,
+    )
+
+    average_exc = np.mean(completing_perc_diff_list)
+    average_inh_1 = np.mean(disrupting_1_perc_diff_list)
+    average_inh_2 = np.mean(disrupting_2_perc_diff_list)
+
+    all_stimuli = list(
+        [
+            MEIs,
+            completing_patterns,
+            disrupting_patterns_1,
+            disrupting_patterns_2,
+            disrupting_pattern_indices,
+        ]
+    )
+
+    return (
+        all_idata,
+        all_stimuli,
+        average_exc,
+        average_inh_1,
+        average_inh_2,
+        disrupting_pattern_indices,
+    )
+
+
+def custom_binary_experiment(
+    config_id,
+    seed,
+    g_dim,
+    g_prob,
+    i_sigma,
+    patterns_offset,
+    image_type,
+    n_tune,
+    n_draws,
+    n_chains,
+    n_cores,
+):
+    """
+    Parameters:
+    - config_id (int): Identifier for the configuration.
+    - seed (int): Random seed for reproducibility.
+    - g_dim (int): Dimensionality of the pattern space.
+    - g_prob (float): Probability of G in the model.
+    - i_sigma (float): Sigma parameter for I in the model.
+    - patterns_offset (float): Offset for patterns in the model.
+    - image_type (str): Type of image to use for the experiment.
+    - n_tune (int): Number of tuning steps for model sampling.
+    - n_draws (int): Number of draws for model sampling.
+    - n_chains (int): Number of chains for model sampling.
+    - n_cores (int): Number of CPU cores for parallel processing.
+
+    Returns:
+    Tuple containing various results and visualizations from the experiment.
+    - all_idata (list): List of InferenceData objects from the experiment.
+    - all_stimuli (list): List of stimuli used in the experiment.
+    - disrupting_pattern_indices (list): List of indices for disrupting patterns.
+
+    """
+
+    if image_type == "exc":
+        exc_fname = "/src/project/data/experiment/exc_images_preprocessed.npy"
+        exc_images = np.load(exc_fname)
+        exc_images_mean = exc_images.mean(axis=0)
+        exc_images = exc_images - exc_images_mean
+        vmin = exc_images.min()
+        vmax = exc_images.max()
+
+    if g_dim != 5:
+        raise ValueError("g_dim must be 5 for this experiment")
+
+    # hardcoded pattern indices for control
+    patterns = exc_images[[0, 1, 3, 8, 9]]
+
+    # patterns = exc_images[[0, 1, 8]]
+
+    assert len(patterns) == g_dim
+
+    # # visualize patterns
+    # fig_g_stimuli, axs = plt.subplots(1, g_dim, figsize=(g_dim * 4, 4))
+    # for ax, pattern in zip(axs.flatten(), patterns):
+    #     ax.imshow(pattern, cmap="gray", vmin=vmin, vmax=vmax)
+    #     ax.axis("off")
+
+    # build model
+    # first build g_x mapping
+
+    mapping = np.zeros((g_dim * 9, g_dim)) + 0.05
+    for j in range(0, g_dim * 9, g_dim):
+        for i in range(g_dim):
+            mapping[i + j, i] = 0.8
+
+    model = BinaryPatternCompletionModel(
+        patterns=patterns,
+        G_prob=g_prob,
+        I_sigma=i_sigma,
+        patterns_offset=patterns_offset,
+        g_x_mapping=mapping,
+    )
+    # create stimuli
+    (
+        MEIs,
+        completing_patterns,
+        disrupting_patterns_1,
+        disrupting_patterns_2,
+        disrupting_pattern_indices,
+    ) = create_stimuli(patterns)
+
+    all_idata = []
+    for MEI, completing_pattern, disrupting_pattern_1, disrupting_pattern_2 in zip(
+        MEIs, completing_patterns, disrupting_patterns_1, disrupting_patterns_2
+    ):
+        idata_set = []
+        idata = model(
+            image=MEI,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        # check if connection is still alive
+        dj.conn().ping()
+        idata = model(
+            image=completing_pattern,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        # check if connection is still alive
+        dj.conn().ping()
+        idata = model(
+            image=disrupting_pattern_1,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        # check if connection is still alive
+        dj.conn().ping()
+        idata = model(
+            image=disrupting_pattern_2,
+            n_samples=n_draws,
+            tune=n_tune,
+            chains=n_chains,
+            cores=n_cores,
+            random_seed=seed,
+        )
+        idata_set.append(idata)
+        # check if connection is still alive
+        dj.conn().ping()
+        all_idata.append(idata_set)
+
+    # (
+    #     fig_posterior,
+    #     axs,
+    #     completing_perc_diff_list,
+    #     disrupting_1_perc_diff_list,
+    #     disrupting_2_perc_diff_list,
+    # ) = plot_posterior_binary(
+    #     G_dim=g_dim,
+    #     disrupting_pattern_indices=disrupting_pattern_indices,
+    #     all_idata=all_idata,
+    # )
+
+    all_stimuli = list(
+        [
+            MEIs,
+            completing_patterns,
+            disrupting_patterns_1,
+            disrupting_patterns_2,
+            disrupting_pattern_indices,
+        ]
+    )
+
+    return (
+        all_idata,
+        all_stimuli,
         disrupting_pattern_indices,
     )
