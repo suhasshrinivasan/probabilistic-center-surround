@@ -134,7 +134,7 @@ class PatternCompletionModel:
                     image[i * self.I_patch_dim : (i + 1) * self.I_patch_dim].reshape(
                         self.I_patch_side, self.I_patch_side
                     )
-                    for i in range(len(self.X_I_models))
+                    for i in range(9)
                 ]
             )
             reshaped_images.append(reshaped_image)
@@ -448,11 +448,11 @@ class PatternCompletionModel:
         return generated_Is
 
 
-
 class ExpPatternCompletionModel(PatternCompletionModel):
     """
     Same as PatternCompletionModel but with an exponential distribution for X.
     """
+
     def __init__(
         self,
         patterns,
@@ -462,7 +462,7 @@ class ExpPatternCompletionModel(PatternCompletionModel):
         patterns_offset=0,
         G_X_exponent=1,
         scale_offset=2,
-        scale_exponent=1
+        scale_exponent=1,
     ):
         """
         Same as PatternCompletionModel but with one additional parameter:
@@ -488,7 +488,9 @@ class ExpPatternCompletionModel(PatternCompletionModel):
         i_sigma = pt.as_tensor_variable([I_sigma])
         with self.prob_model:
             G = pm.Bernoulli("G", p=g_p, shape=self.G_dim)
-            X_scale = pm.Deterministic("X_mu", (self.scale_offset + (g_x_mapping @ G)) ** self.scale_exponent)
+            X_scale = pm.Deterministic(
+                "X_mu", (self.scale_offset + (g_x_mapping @ G)) ** self.scale_exponent
+            )
             X = pm.Exponential("X", scale=X_scale)
             I_mu = pm.Deterministic("I_mu", x_i_mapping @ X)
             I_sigma = pm.Deterministic("I_sigma", i_sigma)
@@ -500,3 +502,135 @@ class ExpPatternCompletionModel(PatternCompletionModel):
                 sigma=i_sigma,
                 observed=obs,
             )
+
+
+class BinaryPatternCompletionModel(PatternCompletionModel):
+    """
+    Same as PatternCompletionModel but with a Bernoulli distribution for X.
+    """
+
+    def __init__(
+        self,
+        patterns,
+        G_prob,
+        I_sigma,
+        patterns_offset=0,
+        offset_x_1=0,
+        offset_x_2=0,
+        scale_x=1,
+        exponent_x=1,
+        zero_threshold_x=0,
+        g_x_mapping=None,
+    ):
+        """
+        Same as PatternCompletionModel but with the following additional parameter that transforms
+        the mapping from G to X to be positive via the formula:
+            G_X_mapping = offset_x_1  + scale_x * (G_X_mapping + offset_x_2) ** exponent_x
+
+        Args:
+            offset_x_1 (float): offset to add to the mapping from G to X
+            offset_x_2 (float): offset to add to the mapping from G to X
+            scale_x (float): scale to multiply the mapping from G to X
+            exponent_x (float): exponent to raise the mapping from G to X
+            zero_threshold_x (float): set minimum value for probabilities in X
+            g_x_mapping (np.ndarray): mapping from G to X of shape (X_dim, G_dim)
+        """
+        self.patterns_offset = patterns_offset
+        # add offset to each of the patterns
+        self.patterns = np.array([image + patterns_offset for image in patterns])
+        self.G_prob = G_prob
+        self.G_dim = self.patterns.shape[0]  # number of latent variables in G
+        # construct mapping from X to I
+        (
+            self.X_I_mapping,
+            self.I_patch_dim,
+            self.X_dim,
+            self.X_patch_dim,
+            self.pattern_crops,
+        ) = self._construct_X_I_mapping()
+        self.I_patch_side = int(np.sqrt(self.I_patch_dim))
+        self.I_dim = self.X_I_mapping.shape[0]
+        self.I_side = int(np.sqrt(self.I_dim))
+
+        self.offset_x_1 = offset_x_1
+        self.offset_x_2 = offset_x_2
+        self.scale_x = scale_x
+        self.exponent_x = exponent_x
+        self.zero_threshold_x = zero_threshold_x
+        self.G_X_mapping = g_x_mapping
+        if self.G_X_mapping is None:
+            self.G_X_mapping = self._construct_G_X_mapping()
+        zero_threshold_x_column = np.full((self.X_dim, 1), self.zero_threshold_x)
+        self.prob_model = pm.Model()
+        g_p = pt.as_tensor_variable([G_prob] * self.G_dim)
+        # print("g_p", g_p)
+        g_x_mapping = pt.as_tensor_variable(self.G_X_mapping)
+        x_i_mapping = pt.as_tensor_variable(self.X_I_mapping)
+        i_sigma = pt.as_tensor_variable([I_sigma])
+        # one_hot_encoded_G = pt.as_tensor_variable(np.eye(self.G_dim))
+
+        with self.prob_model:
+            # G = pm.Categorical("G", p=g_p)
+            # one_hot_encoded_G = pm.Deterministic(
+            #     "one_hot_encoded_G", one_hot_encoded_G[G]
+            # )
+            # X_p = pm.Deterministic("X_p", g_x_mapping @ one_hot_encoded_G)
+            G = pm.Bernoulli("G", p=g_p, shape=self.G_dim)
+            X_p = pm.Deterministic(
+                "X_p",
+                pt.max(
+                    pt.concatenate([g_x_mapping * G, zero_threshold_x_column], axis=1),
+                    axis=1,
+                ),
+            )
+            X = pm.Bernoulli("X", p=X_p, shape=(self.X_dim,))
+            I_mu = pm.Deterministic("I_mu", x_i_mapping @ X)
+            I_sigma = pm.Deterministic("I_sigma", i_sigma)
+            # obs is a placeholder for the observed image
+            obs = pm.MutableData("obs", np.zeros(self.I_dim))
+            I = pm.Normal(
+                "I",
+                mu=I_mu,
+                sigma=I_sigma,
+                observed=obs,
+            )
+
+    def _construct_G_X_mapping(self):
+        """
+        Construct the mapping from G to X via cosine similarity,
+        and then transform the mapping to be positive via the formula:
+            G_X_mapping = offset_x_1  + scale_x * (G_X_mapping + offset_x_2) ** exponent_x
+
+        Args:
+            None
+        Returns:
+            G_X_mapping (np.ndarray): mapping from G to X of shape (X_dim, G_dim)
+        Notes:
+            The mapping is constructed such that turning a latent variable (dimension)
+            in G produces a pattern that is close to the associated pattern provided
+            as input in self.patterns.
+            If there are N self.patterns, then there are N latent variables (dimensions) in G.
+            The pattern is produced when activating a latent variable in G by activating
+            latent variables in X (with crops as projective fields).
+            Each latent variable (dimension) in G maps all the latent variables in X
+            via cosine similarity its pattern and the projective field of each latent
+            variable in X.
+            The cosine similarity is computed between crops of the patterns and projective
+            fields of the latent variables in X (which are also crops of the pattern).
+        """
+        # first convert the (N, h, w) stimuli into (9, N, h//3*w//3) crops
+        pattern_crops = self._images_to_consecutive_crops(self.patterns)
+        pattern_crops = pattern_crops.reshape((*pattern_crops.shape[:-2], -1))
+        # compute the cosine similarity between each projective field and each crop
+        # to get a (9, N_x, N) cosine similarity matrix
+        cos_sim_matrix = []
+        for PF, crop in zip(self.pattern_crops, pattern_crops):
+            cos_sim_matrix.append(cosine_similarity(PF, crop))
+        cos_sim_matrix = np.array(cos_sim_matrix)
+        # convert the (9, N_x, N) cosine similarity matrix into (9 * N_x, N) matrix
+        G_X_mapping = cos_sim_matrix.reshape((-1, cos_sim_matrix.shape[-1]))
+        # apply the transformation
+        return (
+            self.offset_x_1
+            + self.scale_x * (G_X_mapping + self.offset_x_2) ** self.exponent_x
+        )
