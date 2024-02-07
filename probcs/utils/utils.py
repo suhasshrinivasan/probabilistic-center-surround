@@ -8,6 +8,7 @@ from skimage import transform as sk_transform
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import DatasetFolder
+from scipy.ndimage import center_of_mass
 
 
 def get_excitatory_images(
@@ -102,6 +103,41 @@ def sqcrop_and_resize(images, size=(36, 36), anti_aliasing=False):
         cropped = image[:, int((w - h) / 2) : -int((w - h) / 2)]
         resized = sk_transform.resize(cropped, size, anti_aliasing=anti_aliasing)
         final_images.append(resized)
+    return np.array(final_images)
+
+
+def sqcrop_and_resize_center_of_mass(
+    images, size=(30, 30), anti_aliasing=False, edge_threshold=None
+):
+    final_images = []
+    for image in images:
+        h, w = image.shape
+        center_y, center_x = center_of_mass(image)
+
+        # Determine if the center of mass is too close to an edge
+        half_size_y, half_size_x = size[0] // 2, size[1] // 2
+        if edge_threshold is None:
+            edge_threshold = min(half_size_y, half_size_x)
+
+        if (
+            center_x < edge_threshold
+            or center_x > w - edge_threshold
+            or center_y < edge_threshold
+            or center_y > h - edge_threshold
+        ):
+            continue  # Skip this image
+
+        # Calculate cropping coordinates ensuring they are within the image bounds
+        start_x = max(int(center_x - half_size_x), 0)
+        end_x = min(start_x + size[1], w)
+        start_y = max(int(center_y - half_size_y), 0)
+        end_y = min(start_y + size[0], h)
+
+        # Crop and resize
+        cropped = image[start_y:end_y, start_x:end_x]
+        resized = sk_transform.resize(cropped, size, anti_aliasing=anti_aliasing)
+        final_images.append(resized)
+
     return np.array(final_images)
 
 
