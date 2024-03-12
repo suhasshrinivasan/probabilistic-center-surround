@@ -81,6 +81,7 @@ def load_images(
     n_samples=20_000,
     seed=0,
     transform=transforms.RandomCrop(25),
+    shuffle=False,
 ):
     torch.manual_seed(seed)
     # transform = transforms.RandomCrop(crop_size)
@@ -91,7 +92,7 @@ def load_images(
         extensions=".npy",
         transform=transform,
     )
-    dataloader = DataLoader(dataset, batch_size=dataset.__len__())
+    dataloader = DataLoader(dataset, batch_size=dataset.__len__(), shuffle=shuffle)
     images, labels = next(iter(dataloader))
     return images.squeeze(1).numpy()[:n_samples]
 
