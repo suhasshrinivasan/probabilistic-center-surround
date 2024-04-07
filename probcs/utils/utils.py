@@ -20,6 +20,20 @@ def get_excitatory_images(
     return exc_images
 
 
+def get_natural_images(
+    path="/src/project/data/experiment/natural_images_preprocessed_36x36.npy",
+):
+    natural_images = np.load(path)
+    natural_images_mean = natural_images.mean(axis=0)
+    natural_images = natural_images - natural_images_mean
+    return natural_images
+
+
+# def get_natural_images(
+#     path="/src/project/data/experiment/exc_images_preprocessed.npy"
+# )
+
+
 def select_focus_images(
     image_dataset, threshold_low, threshold_high, num_focus_images=10, seed=None
 ):
