@@ -10,6 +10,20 @@ from torchvision import transforms
 from torchvision.datasets import DatasetFolder
 from scipy.ndimage import center_of_mass
 
+def get_center_patches(patterns):
+    h = patterns.shape[1]
+    center_region_start = h // 3
+    center_region_end = 2 * h // 3
+    stimulus = np.zeros_like(patterns)
+    stimulus[:,
+        center_region_start:center_region_end,
+        center_region_start:center_region_end,
+    ] = patterns[:,
+        center_region_start:center_region_end,
+        center_region_start:center_region_end,
+    ].copy()
+    return stimulus
+
 
 def get_excitatory_images(
     path="/src/project/data/experiment/exc_images_preprocessed.npy",
@@ -27,11 +41,6 @@ def get_natural_images(
     natural_images_mean = natural_images.mean(axis=0)
     natural_images = natural_images - natural_images_mean
     return natural_images
-
-
-# def get_natural_images(
-#     path="/src/project/data/experiment/exc_images_preprocessed.npy"
-# )
 
 
 def select_focus_images(
@@ -155,10 +164,6 @@ def sqcrop_and_resize_center_of_mass(
 
     return np.array(final_images)
 
-
-# def turn_images_into_cropsets(images, n_sets=9):
-#     n_pixels = images.shape[-1] * images.shape[-2]
-#     crop_dim = int(np.sqrt(n_pixels / n_sets))
 
 
 # from nnfabrik:
