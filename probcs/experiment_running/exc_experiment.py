@@ -17,6 +17,16 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
+def get_center_patches(patterns):
+    center_region_start = patterns.shape[1] // 3
+    center_region_end = 2 * patterns.shape[1] // 3
+    center_patches = patterns[
+        center_region_start:center_region_end,
+        center_region_start:center_region_end,
+    ]
+    return center_patches
+
+
 def create_stimuli(patterns):
     """
     Generate stimuli for a set of input patterns.

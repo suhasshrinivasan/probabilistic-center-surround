@@ -3,7 +3,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pickle
-from probcs.datajoint.exc_tables import ExcExponentCenterCropResult, ExcExponentCenterCropConfig, schema
+from probcs.datajoint.exc_tables import (
+    ExcExponentCenterCropResult,
+    ExcExponentCenterCropConfig,
+    schema,
+)
 
 
 # %%
@@ -415,7 +419,7 @@ key_results = results.fetch(
 )
 
 for idx, result in enumerate(key_results):
-    # highest_inh_1_config_id = key_results[0]["config_id"] 
+    # highest_inh_1_config_id = key_results[0]["config_id"]
     # # '32645fb5a995f73c4aba131b1c598425'
     # # %%
     # highest_inh_1_results = (results & {"config_id": highest_inh_1_config_id}).fetch(
@@ -427,7 +431,7 @@ for idx, result in enumerate(key_results):
     #     all_idata = pickle.load(f)
     # print("config_id:", result["config_id"])
     result_data = (results & {"config_id": result["config_id"]}).fetch1()
-    if result_data['config_id'] != '562d7f9354a5cb2ae16ddb69e1cc5255':
+    if result_data["config_id"] != "562d7f9354a5cb2ae16ddb69e1cc5255":
         continue
     print(result_data)
     with open(result_data["all_idata"], "rb") as f:

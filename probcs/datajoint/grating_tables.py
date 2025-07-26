@@ -98,6 +98,7 @@ class GratingResult2(dj.Computed):
     """
     Same as GratingResult but with corrected all_idata storage
     """
+
     definition = """
     -> GratingConfig
     ---
@@ -172,6 +173,7 @@ class GratingResult10Plus(dj.Computed):
     """
     Same as GratingResult but with corrected all_idata storage
     """
+
     definition = """
     -> GratingConfig10Plus
     ---

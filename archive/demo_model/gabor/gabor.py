@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+
 def generate_gabor(theta, sigma, Lambda, psi, gamma, center, image_size):
     """
     Gabor generator function.
@@ -20,15 +21,17 @@ def generate_gabor(theta, sigma, Lambda, psi, gamma, center, image_size):
     sigma_y = sigma / gamma
 
     ymax, xmax = image_size
-    xmax, ymax = (xmax - 1)/3, (ymax - 1)/3
+    xmax, ymax = (xmax - 1) / 3, (ymax - 1) / 3
     xmin = -xmax
     ymin = -ymax
-    (y, x) = torch.meshgrid(torch.arange(ymin, ymax+1), torch.arange(xmin, xmax+1))
+    (y, x) = torch.meshgrid(torch.arange(ymin, ymax + 1), torch.arange(xmin, xmax + 1))
 
     # Rotation
     x_theta = (x - center[0]) * np.cos(theta) + (y - center[1]) * np.sin(theta)
     y_theta = -(x - center[0]) * np.sin(theta) + (y - center[1]) * np.cos(theta)
 
-    gb = np.exp(-.5 * (x_theta ** 2 / sigma_x ** 2 + y_theta ** 2 / sigma_y ** 2)) * np.cos(2 * torch.pi / Lambda * x_theta + psi)
+    gb = np.exp(
+        -0.5 * (x_theta**2 / sigma_x**2 + y_theta**2 / sigma_y**2)
+    ) * np.cos(2 * torch.pi / Lambda * x_theta + psi)
 
     return gb

@@ -8,7 +8,7 @@ from probcs.utils.utils import make_hash
 configs = OrderedDict(
     seed=[42],
     g_dim=[10, 20],
-    g_prob=[1 / 10, 1/5],
+    g_prob=[1 / 10, 1 / 5],
     x_sigma=[0.1],
     i_sigma=[20, 10, 5],
     patterns_offset=[0],
