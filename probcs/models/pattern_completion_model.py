@@ -59,9 +59,7 @@ class PatternCompletionModel:
         # construct the model
         self.prob_model = pm.Model()
 
-        # if isinstance(G_prob, list):
-        #     g_p = pt.as_tensor_variable(G_prob)
-        # else:
+
         g_p = pt.as_tensor_variable([G_prob] * self.G_dim)
         g_x_mapping = pt.as_tensor_variable(self.G_X_mapping)
         x_i_mapping = pt.as_tensor_variable(self.X_I_mapping)
@@ -69,11 +67,7 @@ class PatternCompletionModel:
         i_sigma = pt.as_tensor_variable([I_sigma])
         with self.prob_model:
             G = pm.Bernoulli("G", p=g_p, shape=self.G_dim)
-            # G = pm.Categorical(
-            #     "G",
-            #     p=g_p,
-            #     shape=self.G_dim,
-            # )
+
             X_mu = pm.Deterministic("X_mu", g_x_mapping @ G)
             X_sigma = pm.Deterministic("X_sigma", x_sigma)
             X = pm.Laplace("X", mu=X_mu, b=X_sigma)
@@ -242,19 +236,6 @@ class PatternCompletionModel:
         pattern_crops = self._images_to_consecutive_crops(self.patterns)
         pattern_crops = pattern_crops.reshape((*pattern_crops.shape[:-2], -1))
 
-        # todo: add crops that overlap
-        # overlapping_crops = np.array(
-        #     [
-        #         self.patterns[
-        #             :,
-        #             (i * h // 3) + h // 6 : ((i + 1) * h // 3) + h // 6,
-        #             (j * w // 3) + w // 6 : ((j + 1) * w // 3) + w // 6,
-        #         ]
-        #         for i in range(2)
-        #         for j in range(2)
-        #     ]
-        # )
-
         I_dim = h * w  # number of pixels in the image
         I_patch_dim = h // 3 * w // 3  # number of pixels in each image patch
         X_dim = 9 * self.patterns.shape[0]  # number of latent variables in X
@@ -355,9 +336,6 @@ class PatternCompletionModel:
                 for I in generated_Is
             ]
         )
-        # compute min and max for normalization
-        # vmin = -np.max(np.abs(generated_Is))
-        # vmax = np.max(np.abs(generated_Is))   # normalization causing very faint images
         # plot generated Is
         if nrows is None:
             nrows = int(self.G_dim / 10)
@@ -563,18 +541,11 @@ class BinaryPatternCompletionModel(PatternCompletionModel):
         zero_threshold_x_column = np.full((self.X_dim, 1), self.zero_threshold_x)
         self.prob_model = pm.Model()
         g_p = pt.as_tensor_variable([G_prob] * self.G_dim)
-        # print("g_p", g_p)
         g_x_mapping = pt.as_tensor_variable(self.G_X_mapping)
         x_i_mapping = pt.as_tensor_variable(self.X_I_mapping)
         i_sigma = pt.as_tensor_variable([I_sigma])
-        # one_hot_encoded_G = pt.as_tensor_variable(np.eye(self.G_dim))
 
         with self.prob_model:
-            # G = pm.Categorical("G", p=g_p)
-            # one_hot_encoded_G = pm.Deterministic(
-            #     "one_hot_encoded_G", one_hot_encoded_G[G]
-            # )
-            # X_p = pm.Deterministic("X_p", g_x_mapping @ one_hot_encoded_G)
             G = pm.Bernoulli("G", p=g_p, shape=self.G_dim)
             X_p = pm.Deterministic(
                 "X_p",
@@ -606,6 +577,7 @@ class BinaryPatternCompletionModel(PatternCompletionModel):
         Returns:
             G_X_mapping (np.ndarray): mapping from G to X of shape (X_dim, G_dim)
         Notes:
+            *** This is called only if a mapping is already not passed ***
             The mapping is constructed such that turning a latent variable (dimension)
             in G produces a pattern that is close to the associated pattern provided
             as input in self.patterns.
