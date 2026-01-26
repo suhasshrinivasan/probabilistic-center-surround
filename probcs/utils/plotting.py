@@ -746,7 +746,7 @@ def plot_posterior(G_dim, disrupting_pattern_indices, all_idata):
 
 def plot_posterior_binary(G_dim, disrupting_pattern_indices, all_idata):
     """
-    Modified function to plot bar plots of MEI, Completing, and Disrupting patterns for binary X
+    Function to plot bar plots of MEI, Completing, and Disrupting patterns for binary X
     in the same subplot for each latent variable G.
 
     Parameters:
