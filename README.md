@@ -37,7 +37,7 @@ The primary notebook is **[experiments/exc_driven_model/binary_custom_mapping.ip
 
 ## Visualization
 
-See **plots.ipynb** to visualize results and reproduce publication figures.
+See **[experiments/exc_driven_model/plots.ipynb](experiments/exc_driven_model/plots.ipynb)** to visualize results and reproduce publication figures.
 
 ## Project Structure
 
