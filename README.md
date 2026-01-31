@@ -9,14 +9,7 @@ Bayesian inference based normative model that explains in-vivo surround modulati
 Start the development environment:
 
 ```bash
-docker-compose up -d
-docker-compose exec dev bash
-```
-
-Run Jupyter notebooks:
-
-```bash
-docker-compose exec dev jupyter lab --ip=0.0.0.0 --no-browser
+docker compose up -d --build
 ```
 
 ### Local Installation
