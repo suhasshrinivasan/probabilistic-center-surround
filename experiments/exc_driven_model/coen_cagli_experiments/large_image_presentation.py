@@ -16,12 +16,8 @@ import pickle
 seed = 42
 rng = np.random.default_rng(seed)
 
-
 # - Run ~1000 small natural image patches in the normative model
 # - Pick ~200 most activating patches per neuron
-# - Show full field version and analyze response modulation
-# - Post results in channel to discuss whether to include in paper
-
 
 natimgs = load_images(
     crop_size=36,
@@ -50,11 +46,6 @@ patterns_offset = 0
 cross_g_x_feedback = 0.05
 direct_g_x_feedback = 0.8
 
-offset_x_1 = 0
-offset_x_2 = 1
-scale_x = 0.1
-exponent_x = 3
-zero_threshold_x = 0.00
 
 G_visual_nrows = G_dim
 G_visual_ncols = 1
@@ -76,16 +67,8 @@ model = BinaryPatternCompletionModel(
     patterns=patterns,
     G_prob=G_prob,
     I_sigma=I_sigma,
-    patterns_offset=patterns_offset,
-    offset_x_1=offset_x_1,
-    offset_x_2=offset_x_2,
-    scale_x=scale_x,
-    exponent_x=exponent_x,
-    zero_threshold_x=zero_threshold_x,
     g_x_mapping=mapping,
 )
-
-
 
 natimgs_normed = natimgs / exc_images.std()
 print(f"natimgs_normed mean: {natimgs_normed.mean()}, std: {natimgs_normed.std()}")
