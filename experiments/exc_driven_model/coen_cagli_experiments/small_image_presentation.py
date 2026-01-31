@@ -86,20 +86,6 @@ model = BinaryPatternCompletionModel(
 )
 
 
-
-# Take a look at model RFs (G-level)
-fig, axs = plt.subplots(1, G_dim, dpi=300)
-for ax, pattern in zip(axs.flatten(), patterns):
-    ax.imshow(pattern, cmap="gray", vmin=vmin, vmax=vmax)
-    ax.axis("off")
-
-
-natimgs.mean(), natimgs.std()
-
-
-exc_images.mean(), exc_images.std()
-
-
 natimgs_normed = natimgs / exc_images.std()
 print(f"natimgs_normed mean: {natimgs_normed.mean()}, std: {natimgs_normed.std()}")
 
@@ -112,8 +98,6 @@ for ax, stimulus in zip(axs.flatten(), natimgs_normed[:9]):
 
 
 # ### Create "small" images
-
-
 
 
 small_stimuli = get_center_patches(natimgs_normed)
